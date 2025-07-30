@@ -108,7 +108,7 @@ jobs:
         args: --timeout=5m
     
     - name: Run gosec security scanner
-      uses: securecodewarrior/github-action-gosec@v1
+      uses: securego/gosec@master
       with:
         args: '-no-fail -fmt sarif -out gosec.sarif ./...'
     
