@@ -13,7 +13,7 @@ func TestAccProjectResource(t *testing.T) {
 	projectDescription := "Test project description"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -50,7 +50,7 @@ func TestAccProjectResource_WithSettings(t *testing.T) {
 	projectName := acctest.RandomWithPrefix("tf-test-project-settings")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with settings
@@ -71,7 +71,7 @@ func TestAccProjectResource_MinimalConfig(t *testing.T) {
 	projectName := acctest.RandomWithPrefix("tf-test-project-minimal")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with minimal config

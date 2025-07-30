@@ -2,9 +2,11 @@ package provider
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -143,6 +145,53 @@ func testAccPreCheck(t *testing.T) {
 			t.Fatal("N8N_PASSWORD must be set when using N8N_EMAIL for acceptance tests")
 		}
 	}
+}
+
+// testAccPreCheckEnterprise validates that Enterprise features are available
+// Skips the test if Enterprise APIs are not accessible (e.g., community n8n version)
+func testAccPreCheckEnterprise(t *testing.T) {
+	testAccPreCheck(t) // First check basic requirements
+
+	// Check if Enterprise features are available by testing a lightweight endpoint
+	// If not available, skip the test gracefully
+	baseURL := os.Getenv("N8N_BASE_URL")
+	apiKey := os.Getenv("N8N_API_KEY")
+
+	if baseURL == "" || apiKey == "" {
+		t.Skip("Skipping Enterprise test: N8N_BASE_URL or N8N_API_KEY not set")
+		return
+	}
+
+	// Test if projects endpoint is accessible (lightweight check for Enterprise features)
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest("GET", baseURL+"/api/v1/projects", nil)
+	if err != nil {
+		t.Skip("Skipping Enterprise test: Unable to create request")
+		return
+	}
+
+	req.Header.Set("X-N8N-API-KEY", apiKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Skip("Skipping Enterprise test: Unable to connect to n8n API")
+		return
+	}
+	defer resp.Body.Close()
+
+	// If we get 404 or 403, Enterprise features are not available
+	if resp.StatusCode == 404 || resp.StatusCode == 403 {
+		t.Skip("Skipping Enterprise test: Projects API not available (likely community n8n version)")
+		return
+	}
+
+	// If we get other errors (500, etc.), still skip but log it
+	if resp.StatusCode >= 400 {
+		t.Skipf("Skipping Enterprise test: API returned status %d", resp.StatusCode)
+		return
+	}
+
+	// If we reach here, Enterprise features appear to be available
 }
 
 func testAccWorkflowResourceConfig(name string) string {

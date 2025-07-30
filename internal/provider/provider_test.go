@@ -23,4 +23,3 @@ func TestProvider(t *testing.T) {
 		t.Fatal("Expected provider to be non-nil")
 	}
 }
-

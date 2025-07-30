@@ -13,7 +13,7 @@ func TestAccProjectUserResource(t *testing.T) {
 	userEmail := fmt.Sprintf("test-%s@example.com", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -50,7 +50,7 @@ func TestAccProjectUserResource_DefaultRole(t *testing.T) {
 	userEmail := fmt.Sprintf("test-%s@example.com", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with default role
@@ -71,7 +71,7 @@ func TestAccProjectUserResource_MultipleUsers(t *testing.T) {
 	userEmail2 := fmt.Sprintf("test2-%s@example.com", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck:                 func() { testAccPreCheckEnterprise(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with multiple users
