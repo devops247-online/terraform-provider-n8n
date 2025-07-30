@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -82,6 +81,9 @@ func (r *UserResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				MarkdownDescription: "User password. This is sensitive data and will not be stored in the state after creation.",
 				Optional:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"is_owner": schema.BoolAttribute{
 				MarkdownDescription: "Whether the user is an owner of the n8n instance",
@@ -89,9 +91,7 @@ func (r *UserResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			},
 			"is_pending": schema.BoolAttribute{
 				MarkdownDescription: "Whether the user invitation is pending",
-				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
 			},
 			"settings": schema.SingleNestedAttribute{
 				MarkdownDescription: "User-specific settings",
@@ -166,11 +166,17 @@ func (r *UserResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Update model with response data
-	r.updateModelFromUser(&data, createdUser)
+	// Fetch complete user data after creation (creation response may not include all fields)
+	completeUser, err := r.client.GetUser(createdUser.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read created user, got error: %s", err))
+		return
+	}
 
-	// Clear the password from state after successful creation for security
-	data.Password = types.StringNull()
+	// Update model with complete user data
+	r.updateModelFromUser(&data, completeUser)
+
+	// Keep password in state (it's marked as sensitive, so it's secure)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -193,8 +199,14 @@ func (r *UserResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
+	// Preserve the existing password from state (API doesn't return passwords)
+	existingPassword := data.Password
+
 	// Update model with response data
 	r.updateModelFromUser(&data, user)
+
+	// Restore the password field
+	data.Password = existingPassword
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -287,26 +299,28 @@ func (r *UserResource) updateModelFromUser(model *UserResourceModel, user *clien
 	model.IsOwner = types.BoolValue(user.IsOwner)
 	model.IsPending = types.BoolValue(user.IsPending)
 
-	// Handle settings
-	if user.Settings.Theme != "" || user.Settings.AllowSSOManualLogin {
-		settingsAttrs := map[string]attr.Value{
-			"theme":                  types.StringValue(user.Settings.Theme),
-			"allow_sso_manual_login": types.BoolValue(user.Settings.AllowSSOManualLogin),
-		}
-		model.Settings = types.ObjectValueMust(
-			map[string]attr.Type{
-				"theme":                  types.StringType,
-				"allow_sso_manual_login": types.BoolType,
-			},
-			settingsAttrs,
-		)
+	// Handle settings (always set to ensure known value)
+	settingsAttrs := map[string]attr.Value{
+		"theme":                  types.StringValue(user.Settings.Theme),
+		"allow_sso_manual_login": types.BoolValue(user.Settings.AllowSSOManualLogin),
 	}
+	model.Settings = types.ObjectValueMust(
+		map[string]attr.Type{
+			"theme":                  types.StringType,
+			"allow_sso_manual_login": types.BoolType,
+		},
+		settingsAttrs,
+	)
 
 	if user.CreatedAt != nil {
 		model.CreatedAt = types.StringValue(user.CreatedAt.Format("2006-01-02T15:04:05Z"))
+	} else {
+		model.CreatedAt = types.StringNull()
 	}
 
 	if user.UpdatedAt != nil {
 		model.UpdatedAt = types.StringValue(user.UpdatedAt.Format("2006-01-02T15:04:05Z"))
+	} else {
+		model.UpdatedAt = types.StringNull()
 	}
 }

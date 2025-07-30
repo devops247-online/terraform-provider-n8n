@@ -11,9 +11,9 @@ import (
 type Workflow struct {
 	ID          string                 `json:"id,omitempty"`
 	Name        string                 `json:"name"`
-	Active      bool                   `json:"active"`
-	Nodes       map[string]interface{} `json:"nodes,omitempty"`
-	Connections map[string]interface{} `json:"connections,omitempty"`
+	Active      bool                   `json:"active,omitempty"`
+	Nodes       []interface{}          `json:"nodes,omitempty"`
+	Connections map[string]interface{} `json:"connections"`
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 	StaticData  map[string]interface{} `json:"staticData,omitempty"`
 	PinnedData  map[string]interface{} `json:"pinnedData,omitempty"`

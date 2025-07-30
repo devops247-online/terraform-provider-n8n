@@ -12,7 +12,7 @@ type Credential struct {
 	ID         string                 `json:"id,omitempty"`
 	Name       string                 `json:"name"`
 	Type       string                 `json:"type"`
-	Data       map[string]interface{} `json:"data,omitempty"`
+	Data       map[string]interface{} `json:"data"`
 	SharedWith []string               `json:"sharedWith,omitempty"`
 	ProjectID  string                 `json:"projectId,omitempty"`
 	CreatedAt  *time.Time             `json:"createdAt,omitempty"`
@@ -77,15 +77,30 @@ func (c *Client) GetCredential(id string) (*Credential, error) {
 		return nil, fmt.Errorf("credential ID is required")
 	}
 
+	// Try direct endpoint first
 	path := fmt.Sprintf("credentials/%s", id)
-
 	var credential Credential
 	err := c.Get(path, &credential)
-	if err != nil {
+	if err == nil {
+		return &credential, nil
+	}
+
+	// If direct endpoint fails, fall back to list and filter
+	// This is needed for some n8n versions that don't support individual credential GET
+	credentials, listErr := c.GetCredentials(nil)
+	if listErr != nil {
+		// Return original error if list also fails
 		return nil, fmt.Errorf("failed to get credential %s: %w", id, err)
 	}
 
-	return &credential, nil
+	// Find credential by ID in the list
+	for _, cred := range credentials.Data {
+		if cred.ID == id {
+			return &cred, nil
+		}
+	}
+
+	return nil, fmt.Errorf("credential %s not found", id)
 }
 
 // CreateCredential creates a new credential

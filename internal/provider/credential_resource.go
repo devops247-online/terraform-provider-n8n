@@ -198,7 +198,7 @@ func (r *CredentialResource) Create(ctx context.Context, req resource.CreateRequ
 		Type: data.Type.ValueString(),
 	}
 
-	// Parse and validate credential data if provided
+	// Data field is required by n8n API, default to empty object if not provided
 	if !data.Data.IsNull() && data.Data.ValueString() != "" {
 		var credData map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Data.ValueString()), &credData); err != nil {
@@ -221,6 +221,9 @@ func (r *CredentialResource) Create(ctx context.Context, req resource.CreateRequ
 		}
 
 		credential.Data = credData
+	} else {
+		// Set empty data object if not provided (required by n8n API)
+		credential.Data = make(map[string]interface{})
 	}
 
 	// Handle node access
@@ -287,7 +290,7 @@ func (r *CredentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		Type: data.Type.ValueString(),
 	}
 
-	// Parse and validate credential data if provided
+	// Data field is required by n8n API, default to empty object if not provided
 	if !data.Data.IsNull() && data.Data.ValueString() != "" {
 		var credData map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Data.ValueString()), &credData); err != nil {
@@ -310,6 +313,9 @@ func (r *CredentialResource) Update(ctx context.Context, req resource.UpdateRequ
 		}
 
 		credential.Data = credData
+	} else {
+		// Set empty data object if not provided (required by n8n API)
+		credential.Data = make(map[string]interface{})
 	}
 
 	// Handle node access

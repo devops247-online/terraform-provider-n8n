@@ -111,13 +111,30 @@ func (c *Client) CreateUser(userReq *CreateUserRequest) (*User, error) {
 		return nil, fmt.Errorf("user email is required")
 	}
 
-	var result User
-	err := c.Post("users", userReq, &result)
+	// n8n API expects an array of users, so wrap single user in array
+	userArray := []*CreateUserRequest{userReq}
+	
+	// n8n returns array of {user: User, error: string} objects
+	type CreateUserResponse struct {
+		User  User   `json:"user"`
+		Error string `json:"error"`
+	}
+	
+	var resultArray []CreateUserResponse
+	err := c.Post("users", userArray, &resultArray)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
+	
+	if len(resultArray) == 0 {
+		return nil, fmt.Errorf("no user returned from API")
+	}
+	
+	if resultArray[0].Error != "" {
+		return nil, fmt.Errorf("user creation failed: %s", resultArray[0].Error)
+	}
 
-	return &result, nil
+	return &resultArray[0].User, nil
 }
 
 // UpdateUser updates an existing user

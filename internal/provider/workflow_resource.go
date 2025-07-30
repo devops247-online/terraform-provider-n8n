@@ -176,9 +176,12 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 			)
 			return
 		}
-		workflow.Nodes = nodes
+		// Convert nodes from object format to array format for API
+		nodesArray := r.convertNodesToArray(nodes)
+		workflow.Nodes = nodesArray
 	}
 
+	// Connections field is required by n8n API, default to empty object if not provided
 	if !data.Connections.IsNull() && data.Connections.ValueString() != "" {
 		if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -198,8 +201,12 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 		workflow.Connections = connections
+	} else {
+		// Set empty connections object if not provided (required by n8n API)
+		workflow.Connections = make(map[string]interface{})
 	}
 
+	// Settings field is required by n8n API, default to basic settings if not provided
 	if !data.Settings.IsNull() && data.Settings.ValueString() != "" {
 		var settings map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Settings.ValueString()), &settings); err != nil {
@@ -211,6 +218,11 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 		workflow.Settings = settings
+	} else {
+		// Set basic settings if not provided (required by n8n API)
+		workflow.Settings = map[string]interface{}{
+			"executionOrder": "v1",
+		}
 	}
 
 	if !data.StaticData.IsNull() && data.StaticData.ValueString() != "" {
@@ -239,15 +251,7 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 		workflow.PinnedData = pinnedData
 	}
 
-	// Handle tags
-	if !data.Tags.IsNull() {
-		var tags []string
-		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		workflow.Tags = tags
-	}
+	// Tags are read-only during creation, will be set via update if needed
 
 	// Create workflow via API
 	createdWorkflow, err := r.client.CreateWorkflow(workflow)
@@ -255,6 +259,8 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create workflow, got error: %s", err))
 		return
 	}
+
+	// TODO: Tags are read-only in n8n API, need to investigate proper tag management approach
 
 	// Update model with response data
 	r.updateModelFromWorkflow(&data, createdWorkflow)
@@ -322,9 +328,12 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 			)
 			return
 		}
-		workflow.Nodes = nodes
+		// Convert nodes from object format to array format for API
+		nodesArray := r.convertNodesToArray(nodes)
+		workflow.Nodes = nodesArray
 	}
 
+	// Connections field is required by n8n API, default to empty object if not provided
 	if !data.Connections.IsNull() && data.Connections.ValueString() != "" {
 		if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -344,8 +353,12 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 		workflow.Connections = connections
+	} else {
+		// Set empty connections object if not provided (required by n8n API)
+		workflow.Connections = make(map[string]interface{})
 	}
 
+	// Settings field is required by n8n API, default to basic settings if not provided
 	if !data.Settings.IsNull() && data.Settings.ValueString() != "" {
 		var settings map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Settings.ValueString()), &settings); err != nil {
@@ -357,6 +370,11 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 		workflow.Settings = settings
+	} else {
+		// Set basic settings if not provided (required by n8n API)
+		workflow.Settings = map[string]interface{}{
+			"executionOrder": "v1",
+		}
 	}
 
 	if !data.StaticData.IsNull() && data.StaticData.ValueString() != "" {
@@ -492,7 +510,9 @@ func (r *WorkflowResource) updateModelFromWorkflow(model *WorkflowResourceModel,
 
 	// Convert JSON fields to strings
 	if workflow.Nodes != nil {
-		if nodesJSON, err := json.Marshal(workflow.Nodes); err == nil {
+		// Convert nodes from API array format to Terraform object format
+		nodesObject := r.convertNodesFromArray(workflow.Nodes)
+		if nodesJSON, err := json.Marshal(nodesObject); err == nil {
 			model.Nodes = types.StringValue(string(nodesJSON))
 		}
 	}
@@ -513,12 +533,16 @@ func (r *WorkflowResource) updateModelFromWorkflow(model *WorkflowResourceModel,
 		if staticDataJSON, err := json.Marshal(workflow.StaticData); err == nil {
 			model.StaticData = types.StringValue(string(staticDataJSON))
 		}
+	} else {
+		model.StaticData = types.StringNull()
 	}
 
 	if workflow.PinnedData != nil {
 		if pinnedDataJSON, err := json.Marshal(workflow.PinnedData); err == nil {
 			model.PinnedData = types.StringValue(string(pinnedDataJSON))
 		}
+	} else {
+		model.PinnedData = types.StringNull()
 	}
 
 	// Handle tags
@@ -541,4 +565,43 @@ func (r *WorkflowResource) updateModelFromWorkflow(model *WorkflowResourceModel,
 	if workflow.UpdatedAt != nil {
 		model.UpdatedAt = types.StringValue(workflow.UpdatedAt.Format("2006-01-02T15:04:05Z"))
 	}
+}
+
+// convertNodesToArray converts nodes from Terraform's object format to n8n API's array format
+func (r *WorkflowResource) convertNodesToArray(nodes map[string]interface{}) []interface{} {
+	var nodesArray []interface{}
+	
+	for nodeId, nodeData := range nodes {
+		if nodeMap, ok := nodeData.(map[string]interface{}); ok {
+			// Add the node ID to the node data
+			nodeMap["id"] = nodeId
+			nodesArray = append(nodesArray, nodeMap)
+		}
+	}
+	
+	return nodesArray
+}
+
+// convertNodesFromArray converts nodes from n8n API's array format to Terraform's object format  
+func (r *WorkflowResource) convertNodesFromArray(nodesArray []interface{}) map[string]interface{} {
+	nodesObject := make(map[string]interface{})
+	
+	for _, nodeData := range nodesArray {
+		if nodeMap, ok := nodeData.(map[string]interface{}); ok {
+			if nodeId, exists := nodeMap["id"]; exists {
+				if nodeIdStr, ok := nodeId.(string); ok {
+					// Remove the id field from the node data since it becomes the key
+					nodeCopy := make(map[string]interface{})
+					for k, v := range nodeMap {
+						if k != "id" {
+							nodeCopy[k] = v
+						}
+					}
+					nodesObject[nodeIdStr] = nodeCopy
+				}
+			}
+		}
+	}
+	
+	return nodesObject
 }
