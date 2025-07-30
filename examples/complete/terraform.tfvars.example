@@ -1,0 +1,25 @@
+# n8n Configuration
+n8n_base_url = "http://localhost:5678"
+n8n_api_key  = "your-n8n-api-key-here"
+
+# External API Configuration
+external_api_url   = "https://api.example.com/data"
+external_api_token = "your-bearer-token-here"
+
+# Slack Integration
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# Database Configuration
+db_host     = "localhost"
+db_name     = "n8n_data"
+db_username = "n8n_user"
+db_password = "secure_password"
+db_port     = 5432
+db_table    = "processed_data"
+
+# Processing Configuration
+processing_schedule = "0 9 * * *"  # Daily at 9 AM UTC
+activate_workflows  = false        # Start inactive for testing
+
+# Webhook Configuration
+allowed_origins = "*"  # Restrict in production

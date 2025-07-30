@@ -2,15 +2,15 @@
 terraform {
   required_providers {
     n8n = {
-      source = "devops247-online/n8n"
+      source  = "devops247-online/n8n"
       version = "~> 1.0"
     }
   }
 }
 
 provider "n8n" {
-  base_url = "http://localhost:5678"  # or use N8N_BASE_URL env var
-  api_key  = "your-api-key"           # or use N8N_API_KEY env var
+  base_url = "http://localhost:5678" # or use N8N_BASE_URL env var
+  api_key  = "your-api-key"          # or use N8N_API_KEY env var
 }
 
 # Simple workflow with just a name
@@ -26,32 +26,32 @@ resource "n8n_workflow" "webhook_example" {
   tags   = ["automation", "webhook"]
 
   nodes = jsonencode({
-    "webhook": {
-      "type": "n8n-nodes-base.webhook",
-      "position": [240, 300],
-      "parameters": {
-        "path": "example-webhook",
-        "httpMethod": "POST"
+    "webhook" : {
+      "type" : "n8n-nodes-base.webhook",
+      "position" : [240, 300],
+      "parameters" : {
+        "path" : "example-webhook",
+        "httpMethod" : "POST"
       }
     },
-    "http": {
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [460, 300],
-      "parameters": {
-        "url": "https://httpbin.org/post",
-        "method": "POST"
+    "http" : {
+      "type" : "n8n-nodes-base.httpRequest",
+      "position" : [460, 300],
+      "parameters" : {
+        "url" : "https://httpbin.org/post",
+        "method" : "POST"
       }
     }
   })
 
   connections = jsonencode({
-    "webhook": {
-      "main": [
+    "webhook" : {
+      "main" : [
         [
           {
-            "node": "http",
-            "type": "main",
-            "index": 0
+            "node" : "http",
+            "type" : "main",
+            "index" : 0
           }
         ]
       ]
@@ -59,8 +59,8 @@ resource "n8n_workflow" "webhook_example" {
   })
 
   settings = jsonencode({
-    "executionOrder": "v1",
-    "saveManualExecutions": true
+    "executionOrder" : "v1",
+    "saveManualExecutions" : true
   })
 }
 
