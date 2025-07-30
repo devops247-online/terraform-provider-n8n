@@ -1,0 +1,123 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+    goos:
+      - freebsd
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - '386'
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: '386'
+    binary: '{{ .ProjectName }}_v{{ .Version }}'
+
+archives:
+  - format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+release:
+  draft: false
+  replace_existing_draft: true
+  target_commitish: '{{ .Commit }}'
+  discussion_category_name: General
+  prerelease: auto
+  mode: replace
+  header: |
+    ## What's Changed
+    
+    {{ range .CommitGroups -}}
+    ### {{ .Title }}
+    {{ range .Commits -}}
+    - {{ .Message }} ({{ .ShortHash }})
+    {{ end }}
+    {{ end -}}
+    
+    ## Docker Images
+    
+    Docker images are available at:
+    - `ghcr.io/devops247-online/terraform-provider-n8n:{{ .Tag }}`
+    - `ghcr.io/devops247-online/terraform-provider-n8n:latest`
+    
+    ## Installation
+    
+    ### Terraform Registry
+    
+    ```hcl
+    terraform {
+      required_providers {
+        n8n = {
+          source  = "devops247-online/n8n"
+          version = "{{ .Version }}"
+        }
+      }
+    }
+    ```
+    
+    ### Manual Installation
+    
+    Download the appropriate binary for your platform from the attachments below and place it in your Terraform plugins directory.
+  footer: |
+    ## Full Changelog
+    
+    **Full Changelog**: https://github.com/devops247-online/terraform-provider-n8n/compare/{{ .PreviousTag }}...{{ .Tag }}
+    
+    ## Support
+    
+    If you encounter any issues, please report them at: https://github.com/devops247-online/terraform-provider-n8n/issues
+
+changelog:
+  use: github
+  sort: asc
+  abbrev: 0
+  groups:
+    - title: '🚀 Features'
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: '🐛 Bug Fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: '📚 Documentation'
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: '🧹 Maintenance'
+      regexp: '^.*?(chore|refactor)(\(.+\))??!?:.+$'
+      order: 3
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - '^test:'
+      - '^ci:'
+      - '^build:'

@@ -1,0 +1,284 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  GO_VERSION: '1.23.4'
+
+jobs:
+  # Unit and integration tests
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.23.4', '1.22.x']
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      run: go mod download
+    
+    - name: Verify dependencies
+      run: go mod verify
+    
+    - name: Run unit tests
+      run: make test
+    
+    - name: Generate coverage report
+      run: go test -v -coverprofile=coverage.out -covermode=atomic ./...
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      run: go mod download
+    
+    - name: Install development tools
+      run: make tools
+    
+    - name: Check formatting
+      run: |
+        make fmt
+        if [ -n "$(git diff --name-only)" ]; then
+          echo "The following files are not formatted:"
+          git diff --name-only
+          exit 1
+        fi
+    
+    - name: Run go vet
+      run: make vet
+    
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+    
+    - name: Run gosec security scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out gosec.sarif ./...'
+    
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: gosec.sarif
+
+  # Acceptance tests with multiple n8n versions
+  acceptance:
+    name: Acceptance Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        n8n-version: ['1.0.5', '1.1.0', 'latest']
+      fail-fast: false
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: n8n
+          POSTGRES_USER: n8n
+          POSTGRES_DB: n8n
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      run: go mod download
+    
+    - name: Start n8n
+      run: |
+        docker run -d \
+          --name n8n \
+          -p 5678:5678 \
+          -e DB_TYPE=postgresdb \
+          -e DB_POSTGRESDB_HOST=localhost \
+          -e DB_POSTGRESDB_PORT=5432 \
+          -e DB_POSTGRESDB_DATABASE=n8n \
+          -e DB_POSTGRESDB_USER=n8n \
+          -e DB_POSTGRESDB_PASSWORD=n8n \
+          -e N8N_API_KEY=test-api-key \
+          -e EXECUTIONS_DATA_SAVE_ON_SUCCESS=none \
+          -e EXECUTIONS_DATA_SAVE_ON_ERROR=none \
+          -e EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=false \
+          --network host \
+          n8nio/n8n:${{ matrix.n8n-version }}
+    
+    - name: Wait for n8n to be ready
+      run: |
+        timeout 120s bash -c 'until curl -f http://localhost:5678/healthz; do sleep 2; done'
+    
+    - name: Run acceptance tests
+      env:
+        TF_ACC: 1
+        N8N_BASE_URL: http://localhost:5678
+        N8N_API_KEY: test-api-key
+      run: make testacc
+    
+    - name: Stop n8n
+      if: always()
+      run: docker stop n8n && docker rm n8n
+
+  # Documentation validation
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      run: go mod download
+    
+    - name: Install tfplugindocs
+      run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+    
+    - name: Generate documentation
+      run: make docs
+    
+    - name: Check for documentation changes
+      run: |
+        git add docs/
+        if [ -n "$(git diff --staged --name-only)" ]; then
+          echo "Documentation is out of date. Please run 'make docs' and commit the changes."
+          git diff --staged
+          exit 1
+        fi
+
+  # Build test
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      run: go mod download
+    
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        make build
+        ls -la terraform-provider-n8n*

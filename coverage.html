@@ -1,0 +1,2230 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>client: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/devops247-online/terraform-provider-n8n/internal/client/client.go (73.7%)</option>
+				
+				<option value="file1">github.com/devops247-online/terraform-provider-n8n/internal/client/credentials.go (80.0%)</option>
+				
+				<option value="file2">github.com/devops247-online/terraform-provider-n8n/internal/client/users.go (80.4%)</option>
+				
+				<option value="file3">github.com/devops247-online/terraform-provider-n8n/internal/client/workflows.go (90.1%)</option>
+				
+				<option value="file4">github.com/devops247-online/terraform-provider-n8n/internal/provider/credential_resource.go (0.0%)</option>
+				
+				<option value="file5">github.com/devops247-online/terraform-provider-n8n/internal/provider/provider.go (4.5%)</option>
+				
+				<option value="file6">github.com/devops247-online/terraform-provider-n8n/internal/provider/workflow_resource.go (0.0%)</option>
+				
+				<option value="file7">github.com/devops247-online/terraform-provider-n8n/main.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package client
+
+import (
+        "bytes"
+        "crypto/tls"
+        "encoding/json"
+        "fmt"
+        "io"
+        "log"
+        "math"
+        "net/http"
+        "net/url"
+        "strings"
+        "time"
+)
+
+// Client represents the n8n API client
+type Client struct {
+        baseURL     *url.URL
+        httpClient  *http.Client
+        auth        AuthMethod
+        logger      Logger
+        retryConfig RetryConfig
+}
+
+// Logger interface for logging requests and responses
+type Logger interface {
+        Logf(format string, args ...any)
+}
+
+// DefaultLogger implements Logger using the standard log package
+type DefaultLogger struct{}
+
+func (l *DefaultLogger) Logf(format string, args ...any) <span class="cov10" title="86">{
+        log.Printf(format, args...)
+}</span>
+
+// RetryConfig holds retry configuration
+type RetryConfig struct {
+        MaxRetries int
+        BaseDelay  time.Duration
+        MaxDelay   time.Duration
+}
+
+// Config holds configuration for the n8n client
+type Config struct {
+        BaseURL            string
+        Auth               AuthMethod
+        InsecureSkipVerify bool
+        Timeout            time.Duration
+        Logger             Logger
+        RetryConfig        RetryConfig
+}
+
+// AuthMethod interface for different authentication methods
+type AuthMethod interface {
+        ApplyAuth(*http.Request) error
+}
+
+// APIKeyAuth implements API key authentication
+type APIKeyAuth struct {
+        APIKey string
+}
+
+func (a *APIKeyAuth) ApplyAuth(req *http.Request) error <span class="cov7" title="30">{
+        req.Header.Set("X-N8N-API-KEY", a.APIKey)
+        return nil
+}</span>
+
+// BasicAuth implements basic authentication
+type BasicAuth struct {
+        Email    string
+        Password string
+}
+
+func (a *BasicAuth) ApplyAuth(req *http.Request) error <span class="cov1" title="1">{
+        req.SetBasicAuth(a.Email, a.Password)
+        return nil
+}</span>
+
+// APIError represents an error response from the n8n API
+type APIError struct {
+        Code    int    `json:"code"`
+        Message string `json:"message"`
+        Details string `json:"details,omitempty"`
+}
+
+func (e *APIError) Error() string <span class="cov0" title="0">{
+        if e.Details != "" </span><span class="cov0" title="0">{
+                return fmt.Sprintf("n8n API error (code %d): %s - %s", e.Code, e.Message, e.Details)
+        }</span>
+        <span class="cov0" title="0">return fmt.Sprintf("n8n API error (code %d): %s", e.Code, e.Message)</span>
+}
+
+// NewClient creates a new n8n API client
+func NewClient(config *Config) (*Client, error) <span class="cov8" title="35">{
+        if config.BaseURL == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("base URL is required")
+        }</span>
+
+        <span class="cov8" title="34">if config.Auth == nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("authentication method is required")
+        }</span>
+
+        <span class="cov8" title="33">baseURL, err := url.Parse(config.BaseURL)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("invalid base URL: %w", err)
+        }</span>
+
+        // Ensure the base URL has a trailing slash and api path
+        <span class="cov8" title="32">if !strings.HasSuffix(baseURL.Path, "/") </span><span class="cov8" title="32">{
+                baseURL.Path += "/"
+        }</span>
+        <span class="cov8" title="32">if !strings.HasSuffix(baseURL.Path, "api/v1/") </span><span class="cov8" title="32">{
+                baseURL.Path += "api/v1/"
+        }</span>
+
+        <span class="cov8" title="32">timeout := config.Timeout
+        if timeout == 0 </span><span class="cov7" title="21">{
+                timeout = 30 * time.Second
+        }</span>
+
+        <span class="cov8" title="32">transport := &amp;http.Transport{
+                TLSClientConfig: &amp;tls.Config{
+                        InsecureSkipVerify: config.InsecureSkipVerify,
+                },
+        }
+
+        httpClient := &amp;http.Client{
+                Timeout:   timeout,
+                Transport: transport,
+        }
+
+        logger := config.Logger
+        if logger == nil </span><span class="cov7" title="31">{
+                logger = &amp;DefaultLogger{}
+        }</span>
+
+        <span class="cov8" title="32">retryConfig := config.RetryConfig
+        if retryConfig.MaxRetries == 0 </span><span class="cov7" title="29">{
+                retryConfig.MaxRetries = 3
+        }</span>
+        <span class="cov8" title="32">if retryConfig.BaseDelay == 0 </span><span class="cov7" title="29">{
+                retryConfig.BaseDelay = 100 * time.Millisecond
+        }</span>
+        <span class="cov8" title="32">if retryConfig.MaxDelay == 0 </span><span class="cov7" title="29">{
+                retryConfig.MaxDelay = 5 * time.Second
+        }</span>
+
+        <span class="cov8" title="32">return &amp;Client{
+                baseURL:     baseURL,
+                httpClient:  httpClient,
+                auth:        config.Auth,
+                logger:      logger,
+                retryConfig: retryConfig,
+        }, nil</span>
+}
+
+// doRequest performs an HTTP request with authentication, retries, and logging
+func (c *Client) doRequest(method, path string, body any, result any) error <span class="cov7" title="25">{
+        var jsonData []byte
+        var err error
+
+        if body != nil </span><span class="cov4" title="6">{
+                jsonData, err = json.Marshal(body)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to marshal request body: %w", err)
+                }</span>
+        }
+
+        // Construct full URL
+        <span class="cov7" title="25">var fullURL *url.URL
+        if strings.Contains(path, "?") </span><span class="cov3" title="3">{
+                // Path contains query parameters, parse it properly
+                pathURL, err := url.Parse(path)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to parse path with query: %w", err)
+                }</span>
+                <span class="cov3" title="3">fullURL = c.baseURL.ResolveReference(pathURL)</span>
+        } else<span class="cov7" title="22"> {
+                // Simple path without query parameters
+                fullURL = c.baseURL.ResolveReference(&amp;url.URL{Path: path})
+        }</span>
+
+        <span class="cov7" title="25">for attempt := 0; attempt &lt;= c.retryConfig.MaxRetries; attempt++ </span><span class="cov7" title="29">{
+                var reqBody io.Reader
+                if jsonData != nil </span><span class="cov4" title="6">{
+                        reqBody = bytes.NewBuffer(jsonData)
+                }</span>
+
+                <span class="cov7" title="29">req, err := http.NewRequest(method, fullURL.String(), reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to create request: %w", err)
+                }</span>
+
+                // Set headers
+                <span class="cov7" title="29">req.Header.Set("Content-Type", "application/json")
+                req.Header.Set("Accept", "application/json")
+
+                // Apply authentication
+                if err := c.auth.ApplyAuth(req); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to apply authentication: %w", err)
+                }</span>
+
+                // Log request
+                <span class="cov7" title="29">c.logger.Logf("n8n API request: %s %s (attempt %d/%d)", method, fullURL.String(), attempt+1, c.retryConfig.MaxRetries+1)
+                if len(jsonData) &gt; 0 </span><span class="cov4" title="6">{
+                        c.logger.Logf("n8n API request body: %s", string(jsonData))
+                }</span>
+
+                <span class="cov7" title="29">resp, err := c.httpClient.Do(req)
+                if err != nil </span><span class="cov0" title="0">{
+                        if attempt &lt; c.retryConfig.MaxRetries &amp;&amp; isRetryableError(err) </span><span class="cov0" title="0">{
+                                delay := c.calculateBackoff(attempt)
+                                c.logger.Logf("n8n API request failed, retrying in %v: %v", delay, err)
+                                time.Sleep(delay)
+                                continue</span>
+                        }
+                        <span class="cov0" title="0">return fmt.Errorf("request failed: %w", err)</span>
+                }
+
+                <span class="cov7" title="29">respBody, err := io.ReadAll(resp.Body)
+                resp.Body.Close()
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to read response body: %w", err)
+                }</span>
+
+                // Log response
+                <span class="cov7" title="29">c.logger.Logf("n8n API response: %d %s", resp.StatusCode, resp.Status)
+                if len(respBody) &gt; 0 </span><span class="cov7" title="21">{
+                        c.logger.Logf("n8n API response body: %s", string(respBody))
+                }</span>
+
+                // Handle error responses
+                <span class="cov7" title="29">if resp.StatusCode &gt;= 400 </span><span class="cov4" title="6">{
+                        // Check if this is a retryable HTTP error
+                        if attempt &lt; c.retryConfig.MaxRetries &amp;&amp; isRetryableHTTPStatus(resp.StatusCode) </span><span class="cov3" title="4">{
+                                delay := c.calculateBackoff(attempt)
+                                c.logger.Logf("n8n API request failed with status %d, retrying in %v", resp.StatusCode, delay)
+                                time.Sleep(delay)
+                                continue</span>
+                        }
+
+                        <span class="cov2" title="2">var apiErr APIError
+                        if err := json.Unmarshal(respBody, &amp;apiErr); err != nil </span><span class="cov1" title="1">{
+                                // If we can't parse the error response, create a generic error
+                                return &amp;APIError{
+                                        Code:    resp.StatusCode,
+                                        Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)),
+                                }
+                        }</span>
+                        <span class="cov1" title="1">apiErr.Code = resp.StatusCode
+                        return &amp;apiErr</span>
+                }
+
+                // Parse successful response
+                <span class="cov7" title="23">if result != nil &amp;&amp; len(respBody) &gt; 0 </span><span class="cov7" title="20">{
+                        if err := json.Unmarshal(respBody, result); err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("failed to unmarshal response: %w", err)
+                        }</span>
+                }
+
+                <span class="cov7" title="23">return nil</span>
+        }
+
+        <span class="cov0" title="0">return fmt.Errorf("max retries exceeded")</span>
+}
+
+// calculateBackoff calculates exponential backoff delay
+func (c *Client) calculateBackoff(attempt int) time.Duration <span class="cov5" title="8">{
+        delay := time.Duration(float64(c.retryConfig.BaseDelay) * math.Pow(2, float64(attempt)))
+        return min(delay, c.retryConfig.MaxDelay)
+}</span>
+
+// isRetryableError determines if an error is retryable
+func isRetryableError(err error) bool <span class="cov0" title="0">{
+        // Network errors are generally retryable
+        return strings.Contains(err.Error(), "timeout") ||
+                strings.Contains(err.Error(), "connection refused") ||
+                strings.Contains(err.Error(), "connection reset")
+}</span>
+
+// isRetryableHTTPStatus determines if an HTTP status code is retryable
+func isRetryableHTTPStatus(statusCode int) bool <span class="cov4" title="5">{
+        return statusCode == http.StatusTooManyRequests ||
+                statusCode == http.StatusInternalServerError ||
+                statusCode == http.StatusBadGateway ||
+                statusCode == http.StatusServiceUnavailable ||
+                statusCode == http.StatusGatewayTimeout
+}</span>
+
+// Get performs a GET request
+func (c *Client) Get(path string, result any) error <span class="cov6" title="14">{
+        return c.doRequest("GET", path, nil, result)
+}</span>
+
+// Post performs a POST request
+func (c *Client) Post(path string, body any, result any) error <span class="cov4" title="5">{
+        return c.doRequest("POST", path, body, result)
+}</span>
+
+// Put performs a PUT request
+func (c *Client) Put(path string, body any, result any) error <span class="cov3" title="3">{
+        return c.doRequest("PUT", path, body, result)
+}</span>
+
+// Delete performs a DELETE request
+func (c *Client) Delete(path string) error <span class="cov3" title="3">{
+        return c.doRequest("DELETE", path, nil, nil)
+}</span>
+
+// PaginationInfo holds pagination metadata
+type PaginationInfo struct {
+        Limit      int    `json:"limit,omitempty"`
+        Offset     int    `json:"offset,omitempty"`
+        Total      int    `json:"total,omitempty"`
+        NextCursor string `json:"nextCursor,omitempty"`
+        HasNext    bool   `json:"hasNext,omitempty"`
+}
+
+// GetWithPagination performs a GET request with pagination support
+func (c *Client) GetWithPagination(path string, result any) (*PaginationInfo, error) <span class="cov0" title="0">{
+        err := c.doRequest("GET", path, nil, result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Try to extract pagination info from the response
+        // This is a best-effort approach since different endpoints might return different formats
+        <span class="cov0" title="0">pagination := &amp;PaginationInfo{}
+
+        // If result is a map, try to extract pagination fields
+        if resultMap, ok := result.(*map[string]any); ok </span><span class="cov0" title="0">{
+                if nextCursor, exists := (*resultMap)["nextCursor"]; exists </span><span class="cov0" title="0">{
+                        if cursorStr, ok := nextCursor.(string); ok </span><span class="cov0" title="0">{
+                                pagination.NextCursor = cursorStr
+                                pagination.HasNext = cursorStr != ""
+                        }</span>
+                }
+                <span class="cov0" title="0">if total, exists := (*resultMap)["total"]; exists </span><span class="cov0" title="0">{
+                        if totalFloat, ok := total.(float64); ok </span><span class="cov0" title="0">{
+                                pagination.Total = int(totalFloat)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return pagination, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package client
+
+import (
+        "fmt"
+        "net/url"
+        "strconv"
+        "time"
+)
+
+// Credential represents an n8n credential
+type Credential struct {
+        ID         string                 `json:"id,omitempty"`
+        Name       string                 `json:"name"`
+        Type       string                 `json:"type"`
+        Data       map[string]interface{} `json:"data,omitempty"`
+        SharedWith []string               `json:"sharedWith,omitempty"`
+        ProjectID  string                 `json:"projectId,omitempty"`
+        CreatedAt  *time.Time             `json:"createdAt,omitempty"`
+        UpdatedAt  *time.Time             `json:"updatedAt,omitempty"`
+}
+
+// CredentialListOptions represents options for listing credentials
+type CredentialListOptions struct {
+        Type      string
+        ProjectID string
+        Limit     int
+        Offset    int
+}
+
+// CredentialListResponse represents the response from listing credentials
+type CredentialListResponse struct {
+        Data       []Credential `json:"data"`
+        NextCursor string       `json:"nextCursor,omitempty"`
+}
+
+// GetCredentials retrieves a list of credentials
+func (c *Client) GetCredentials(options *CredentialListOptions) (*CredentialListResponse, error) <span class="cov5" title="2">{
+        u, err := url.Parse("credentials")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse URL: %w", err)
+        }</span>
+
+        <span class="cov5" title="2">if options != nil </span><span class="cov1" title="1">{
+                params := url.Values{}
+
+                if options.Type != "" </span><span class="cov1" title="1">{
+                        params.Set("type", options.Type)
+                }</span>
+
+                <span class="cov1" title="1">if options.ProjectID != "" </span><span class="cov0" title="0">{
+                        params.Set("projectId", options.ProjectID)
+                }</span>
+
+                <span class="cov1" title="1">if options.Limit &gt; 0 </span><span class="cov1" title="1">{
+                        params.Set("limit", strconv.Itoa(options.Limit))
+                }</span>
+
+                <span class="cov1" title="1">if options.Offset &gt; 0 </span><span class="cov0" title="0">{
+                        params.Set("offset", strconv.Itoa(options.Offset))
+                }</span>
+
+                <span class="cov1" title="1">u.RawQuery = params.Encode()</span>
+        }
+
+        <span class="cov5" title="2">var result CredentialListResponse
+        err = c.Get(u.String(), &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get credentials: %w", err)
+        }</span>
+
+        <span class="cov5" title="2">return &amp;result, nil</span>
+}
+
+// GetCredential retrieves a specific credential by ID
+func (c *Client) GetCredential(id string) (*Credential, error) <span class="cov5" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("credential ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("credentials/%s", id)
+
+        var credential Credential
+        err := c.Get(path, &amp;credential)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get credential %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;credential, nil</span>
+}
+
+// CreateCredential creates a new credential
+func (c *Client) CreateCredential(credential *Credential) (*Credential, error) <span class="cov10" title="4">{
+        if credential == nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("credential is required")
+        }</span>
+
+        <span class="cov8" title="3">if credential.Name == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("credential name is required")
+        }</span>
+
+        <span class="cov5" title="2">if credential.Type == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("credential type is required")
+        }</span>
+
+        <span class="cov1" title="1">var result Credential
+        err := c.Post("credentials", credential, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create credential: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// UpdateCredential updates an existing credential
+func (c *Client) UpdateCredential(id string, credential *Credential) (*Credential, error) <span class="cov1" title="1">{
+        if id == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("credential ID is required")
+        }</span>
+
+        <span class="cov1" title="1">if credential == nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("credential is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("credentials/%s", id)
+
+        var result Credential
+        err := c.Put(path, credential, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to update credential %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// DeleteCredential deletes a credential
+func (c *Client) DeleteCredential(id string) error <span class="cov1" title="1">{
+        if id == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("credential ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("credentials/%s", id)
+
+        err := c.Delete(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to delete credential %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package client
+
+import (
+        "fmt"
+        "net/url"
+        "strconv"
+        "time"
+)
+
+// User represents an n8n user
+type User struct {
+        ID          string       `json:"id,omitempty"`
+        Email       string       `json:"email"`
+        FirstName   string       `json:"firstName,omitempty"`
+        LastName    string       `json:"lastName,omitempty"`
+        Role        string       `json:"role,omitempty"`
+        IsOwner     bool         `json:"isOwner,omitempty"`
+        IsPending   bool         `json:"isPending,omitempty"`
+        SignupToken string       `json:"signupToken,omitempty"`
+        Settings    UserSettings `json:"settings,omitempty"`
+        CreatedAt   *time.Time   `json:"createdAt,omitempty"`
+        UpdatedAt   *time.Time   `json:"updatedAt,omitempty"`
+}
+
+// UserSettings represents user-specific settings
+type UserSettings struct {
+        Theme               string `json:"theme,omitempty"`
+        AllowSSOManualLogin bool   `json:"allowSSOManualLogin,omitempty"`
+}
+
+// UserListOptions represents options for listing users
+type UserListOptions struct {
+        Role   string
+        Limit  int
+        Offset int
+}
+
+// UserListResponse represents the response from listing users
+type UserListResponse struct {
+        Data       []User `json:"data"`
+        NextCursor string `json:"nextCursor,omitempty"`
+}
+
+// CreateUserRequest represents the request body for creating a user
+type CreateUserRequest struct {
+        Email     string `json:"email"`
+        FirstName string `json:"firstName,omitempty"`
+        LastName  string `json:"lastName,omitempty"`
+        Role      string `json:"role,omitempty"`
+        Password  string `json:"password,omitempty"`
+}
+
+// GetUsers retrieves a list of users
+func (c *Client) GetUsers(options *UserListOptions) (*UserListResponse, error) <span class="cov6" title="2">{
+        u, err := url.Parse("users")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse URL: %w", err)
+        }</span>
+
+        <span class="cov6" title="2">if options != nil </span><span class="cov1" title="1">{
+                params := url.Values{}
+
+                if options.Role != "" </span><span class="cov1" title="1">{
+                        params.Set("role", options.Role)
+                }</span>
+
+                <span class="cov1" title="1">if options.Limit &gt; 0 </span><span class="cov1" title="1">{
+                        params.Set("limit", strconv.Itoa(options.Limit))
+                }</span>
+
+                <span class="cov1" title="1">if options.Offset &gt; 0 </span><span class="cov0" title="0">{
+                        params.Set("offset", strconv.Itoa(options.Offset))
+                }</span>
+
+                <span class="cov1" title="1">u.RawQuery = params.Encode()</span>
+        }
+
+        <span class="cov6" title="2">var result UserListResponse
+        err = c.Get(u.String(), &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get users: %w", err)
+        }</span>
+
+        <span class="cov6" title="2">return &amp;result, nil</span>
+}
+
+// GetUser retrieves a specific user by ID
+func (c *Client) GetUser(id string) (*User, error) <span class="cov6" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("user ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("users/%s", id)
+
+        var user User
+        err := c.Get(path, &amp;user)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get user %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;user, nil</span>
+}
+
+// CreateUser creates a new user
+func (c *Client) CreateUser(userReq *CreateUserRequest) (*User, error) <span class="cov10" title="3">{
+        if userReq == nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("user request is required")
+        }</span>
+
+        <span class="cov6" title="2">if userReq.Email == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("user email is required")
+        }</span>
+
+        <span class="cov1" title="1">var result User
+        err := c.Post("users", userReq, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create user: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// UpdateUser updates an existing user
+func (c *Client) UpdateUser(id string, user *User) (*User, error) <span class="cov1" title="1">{
+        if id == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("user ID is required")
+        }</span>
+
+        <span class="cov1" title="1">if user == nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("user is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("users/%s", id)
+
+        var result User
+        err := c.Put(path, user, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to update user %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// DeleteUser deletes a user
+func (c *Client) DeleteUser(id string) error <span class="cov1" title="1">{
+        if id == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("user ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("users/%s", id)
+
+        err := c.Delete(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to delete user %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package client
+
+import (
+        "fmt"
+        "net/url"
+        "strconv"
+        "time"
+)
+
+// Workflow represents an n8n workflow
+type Workflow struct {
+        ID          string                 `json:"id,omitempty"`
+        Name        string                 `json:"name"`
+        Active      bool                   `json:"active"`
+        Nodes       map[string]interface{} `json:"nodes,omitempty"`
+        Connections map[string]interface{} `json:"connections,omitempty"`
+        Settings    map[string]interface{} `json:"settings,omitempty"`
+        StaticData  map[string]interface{} `json:"staticData,omitempty"`
+        PinnedData  map[string]interface{} `json:"pinnedData,omitempty"`
+        Tags        []string               `json:"tags,omitempty"`
+        VersionID   string                 `json:"versionId,omitempty"`
+        CreatedAt   *time.Time             `json:"createdAt,omitempty"`
+        UpdatedAt   *time.Time             `json:"updatedAt,omitempty"`
+}
+
+// WorkflowListOptions represents options for listing workflows
+type WorkflowListOptions struct {
+        Active    *bool
+        Tags      []string
+        ProjectID string
+        Limit     int
+        Offset    int
+}
+
+// WorkflowListResponse represents the response from listing workflows
+type WorkflowListResponse struct {
+        Data       []Workflow `json:"data"`
+        NextCursor string     `json:"nextCursor,omitempty"`
+}
+
+// GetWorkflows retrieves a list of workflows
+func (c *Client) GetWorkflows(options *WorkflowListOptions) (*WorkflowListResponse, error) <span class="cov6" title="2">{
+        path := "workflows"
+
+        if options != nil </span><span class="cov1" title="1">{
+                params := url.Values{}
+
+                if options.Active != nil </span><span class="cov1" title="1">{
+                        params.Set("active", strconv.FormatBool(*options.Active))
+                }</span>
+
+                <span class="cov1" title="1">if len(options.Tags) &gt; 0 </span><span class="cov1" title="1">{
+                        for _, tag := range options.Tags </span><span class="cov6" title="2">{
+                                params.Add("tags", tag)
+                        }</span>
+                }
+
+                <span class="cov1" title="1">if options.ProjectID != "" </span><span class="cov1" title="1">{
+                        params.Set("projectId", options.ProjectID)
+                }</span>
+
+                <span class="cov1" title="1">if options.Limit &gt; 0 </span><span class="cov1" title="1">{
+                        params.Set("limit", strconv.Itoa(options.Limit))
+                }</span>
+
+                <span class="cov1" title="1">if options.Offset &gt; 0 </span><span class="cov1" title="1">{
+                        params.Set("offset", strconv.Itoa(options.Offset))
+                }</span>
+
+                <span class="cov1" title="1">if len(params) &gt; 0 </span><span class="cov1" title="1">{
+                        path += "?" + params.Encode()
+                }</span>
+        }
+
+        <span class="cov6" title="2">var result WorkflowListResponse
+        err := c.Get(path, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get workflows: %w", err)
+        }</span>
+
+        <span class="cov6" title="2">return &amp;result, nil</span>
+}
+
+// GetWorkflow retrieves a specific workflow by ID
+func (c *Client) GetWorkflow(id string) (*Workflow, error) <span class="cov6" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("workflows/%s", id)
+
+        var workflow Workflow
+        err := c.Get(path, &amp;workflow)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get workflow %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;workflow, nil</span>
+}
+
+// CreateWorkflow creates a new workflow
+func (c *Client) CreateWorkflow(workflow *Workflow) (*Workflow, error) <span class="cov10" title="3">{
+        if workflow == nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow is required")
+        }</span>
+
+        <span class="cov6" title="2">if workflow.Name == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow name is required")
+        }</span>
+
+        <span class="cov1" title="1">var result Workflow
+        err := c.Post("workflows", workflow, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create workflow: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// UpdateWorkflow updates an existing workflow
+func (c *Client) UpdateWorkflow(id string, workflow *Workflow) (*Workflow, error) <span class="cov10" title="3">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow ID is required")
+        }</span>
+
+        <span class="cov6" title="2">if workflow == nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("workflows/%s", id)
+
+        var result Workflow
+        err := c.Put(path, workflow, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to update workflow %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// DeleteWorkflow deletes a workflow
+func (c *Client) DeleteWorkflow(id string) error <span class="cov6" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return fmt.Errorf("workflow ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("workflows/%s", id)
+
+        err := c.Delete(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to delete workflow %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return nil</span>
+}
+
+// ActivateWorkflow activates a workflow
+func (c *Client) ActivateWorkflow(id string) (*Workflow, error) <span class="cov6" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("workflows/%s/activate", id)
+
+        var result Workflow
+        err := c.Post(path, nil, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to activate workflow %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+
+// DeactivateWorkflow deactivates a workflow
+func (c *Client) DeactivateWorkflow(id string) (*Workflow, error) <span class="cov6" title="2">{
+        if id == "" </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("workflow ID is required")
+        }</span>
+
+        <span class="cov1" title="1">path := fmt.Sprintf("workflows/%s/deactivate", id)
+
+        var result Workflow
+        err := c.Post(path, nil, &amp;result)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to deactivate workflow %s: %w", id, err)
+        }</span>
+
+        <span class="cov1" title="1">return &amp;result, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package provider
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "slices"
+        "strings"
+
+        "github.com/hashicorp/terraform-plugin-framework/attr"
+        "github.com/hashicorp/terraform-plugin-framework/path"
+        "github.com/hashicorp/terraform-plugin-framework/resource"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+        "github.com/hashicorp/terraform-plugin-framework/types"
+
+        "github.com/devops247-online/terraform-provider-n8n/internal/client"
+)
+
+// Ensure provider defined types fully satisfy framework interfaces.
+var _ resource.Resource = &amp;CredentialResource{}
+var _ resource.ResourceWithImportState = &amp;CredentialResource{}
+
+func NewCredentialResource() resource.Resource <span class="cov0" title="0">{
+        return &amp;CredentialResource{}
+}</span>
+
+// CredentialResource defines the resource implementation.
+type CredentialResource struct {
+        client *client.Client
+}
+
+// CredentialResourceModel describes the resource data model.
+type CredentialResourceModel struct {
+        ID         types.String `tfsdk:"id"`
+        Name       types.String `tfsdk:"name"`
+        Type       types.String `tfsdk:"type"`
+        Data       types.String `tfsdk:"data"`
+        NodeAccess types.List   `tfsdk:"node_access"`
+        CreatedAt  types.String `tfsdk:"created_at"`
+        UpdatedAt  types.String `tfsdk:"updated_at"`
+}
+
+// Supported credential types for validation
+var supportedCredentialTypes = []string{
+        "httpBasicAuth",
+        "apiKey",
+        "oAuth2Api",
+        "oAuth1Api",
+        "googleOAuth2Api",
+        "awsApi",
+        "azureApi",
+        "microsoftGraphApi",
+        "httpDigestAuth",
+        "httpHeaderAuth",
+        "httpQueryAuth",
+        "jwtAuth",
+        "bearerTokenAuth",
+        "samlAuth",
+        "ldapAuth",
+        "slackOAuth2Api",
+        "githubOAuth2Api",
+        "gitlabOAuth2Api",
+        "discordOAuth2Api",
+        "shopifyOAuth2Api",
+        "stripeApi",
+        "twilioApi",
+        "sendGridApi",
+        "mailgunApi",
+        "dropboxOAuth2Api",
+        "googleDriveOAuth2Api",
+        "onedriveOAuth2Api",
+        "boxOAuth2Api",
+        "salesforceOAuth2Api",
+        "hubspotOAuth2Api",
+        "zendeskOAuth2Api",
+        "jiraCloudApi",
+        "confluenceCloudApi",
+        "atlassianOAuth2Api",
+        "trelloApi",
+        "asanaOAuth2Api",
+        "mondayComOAuth2Api",
+        "notionOAuth2Api",
+        "airtableOAuth2Api",
+        "clickUpOAuth2Api",
+        "linearOAuth2Api",
+        "figmaOAuth2Api",
+        "canvaOAuth2Api",
+        "youtubeOAuth2Api",
+        "spotifyOAuth2Api",
+        "twitterOAuth2Api",
+        "facebookGraphApi",
+        "instagramGraphApi",
+        "linkedInOAuth2Api",
+        "telegramBotApi",
+        "whatsappBusinessApi",
+        "openAiApi",
+        "anthropicApi",
+        "huggingFaceApi",
+        "cohereApi",
+        "mistralApi",
+        "groqApi",
+}
+
+func (r *CredentialResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) <span class="cov0" title="0">{
+        resp.TypeName = req.ProviderTypeName + "_credential"
+}</span>
+
+func (r *CredentialResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) <span class="cov0" title="0">{
+        resp.Schema = schema.Schema{
+                MarkdownDescription: "Manages an n8n credential securely. Credentials store authentication information for services and APIs used by workflows, with proper handling of sensitive data.",
+
+                Attributes: map[string]schema.Attribute{
+                        "id": schema.StringAttribute{
+                                MarkdownDescription: "Credential identifier",
+                                Computed:            true,
+                                PlanModifiers: []planmodifier.String{
+                                        stringplanmodifier.UseStateForUnknown(),
+                                },
+                        },
+                        "name": schema.StringAttribute{
+                                MarkdownDescription: "The name of the credential. Must be unique within the n8n instance.",
+                                Required:            true,
+                        },
+                        "type": schema.StringAttribute{
+                                MarkdownDescription: "The type of credential (e.g., 'httpBasicAuth', 'oAuth2Api', 'apiKey'). Determines the required data fields.",
+                                Required:            true,
+                                PlanModifiers: []planmodifier.String{
+                                        stringplanmodifier.RequiresReplace(),
+                                },
+                        },
+                        "data": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing the credential configuration data. This field is sensitive and will be encrypted in state.",
+                                Optional:            true,
+                                Sensitive:           true,
+                        },
+                        "node_access": schema.ListAttribute{
+                                MarkdownDescription: "List of node names that can access this credential. If empty, all nodes can access it.",
+                                ElementType:         types.StringType,
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "created_at": schema.StringAttribute{
+                                MarkdownDescription: "Timestamp when the credential was created",
+                                Computed:            true,
+                        },
+                        "updated_at": schema.StringAttribute{
+                                MarkdownDescription: "Timestamp when the credential was last updated",
+                                Computed:            true,
+                        },
+                },
+        }
+}</span>
+
+func (r *CredentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) <span class="cov0" title="0">{
+        // Prevent panic if the provider has not been configured.
+        if req.ProviderData == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">client, ok := req.ProviderData.(*client.Client)
+
+        if !ok </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError(
+                        "Unexpected Resource Configure Type",
+                        fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+                )
+
+                return
+        }</span>
+
+        <span class="cov0" title="0">r.client = client</span>
+}
+
+func (r *CredentialResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) <span class="cov0" title="0">{
+        var data CredentialResourceModel
+
+        // Read Terraform plan data into the model
+        resp.Diagnostics.Append(req.Plan.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Validate credential type
+        <span class="cov0" title="0">if err := r.validateCredentialType(data.Type.ValueString()); err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddAttributeError(
+                        path.Root("type"),
+                        "Invalid Credential Type",
+                        err.Error(),
+                )
+                return
+        }</span>
+
+        // Create credential object
+        <span class="cov0" title="0">credential := &amp;client.Credential{
+                Name: data.Name.ValueString(),
+                Type: data.Type.ValueString(),
+        }
+
+        // Parse and validate credential data if provided
+        if !data.Data.IsNull() &amp;&amp; data.Data.ValueString() != "" </span><span class="cov0" title="0">{
+                var credData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Data.ValueString()), &amp;credData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse credential data JSON: %s", err),
+                        )
+                        return
+                }</span>
+
+                // Validate credential data based on type
+                <span class="cov0" title="0">if err := r.validateCredentialData(data.Type.ValueString(), credData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("data"),
+                                "Invalid Credential Data",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+
+                <span class="cov0" title="0">credential.Data = credData</span>
+        }
+
+        // Handle node access
+        <span class="cov0" title="0">if !data.NodeAccess.IsNull() </span><span class="cov0" title="0">{
+                var nodeAccess []string
+                resp.Diagnostics.Append(data.NodeAccess.ElementsAs(ctx, &amp;nodeAccess, false)...)
+                if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">credential.SharedWith = nodeAccess</span>
+        }
+
+        // Create credential via API
+        <span class="cov0" title="0">createdCredential, err := r.client.CreateCredential(credential)
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create credential, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromCredential(&amp;data, createdCredential)
+
+        // Save data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *CredentialResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) <span class="cov0" title="0">{
+        var data CredentialResourceModel
+
+        // Read Terraform prior state data into the model
+        resp.Diagnostics.Append(req.State.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Get credential from API
+        <span class="cov0" title="0">credential, err := r.client.GetCredential(data.ID.ValueString())
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read credential, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromCredential(&amp;data, credential)
+
+        // Save updated data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *CredentialResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) <span class="cov0" title="0">{
+        var data CredentialResourceModel
+
+        // Read Terraform plan data into the model
+        resp.Diagnostics.Append(req.Plan.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Create credential object for update
+        <span class="cov0" title="0">credential := &amp;client.Credential{
+                Name: data.Name.ValueString(),
+                Type: data.Type.ValueString(),
+        }
+
+        // Parse and validate credential data if provided
+        if !data.Data.IsNull() &amp;&amp; data.Data.ValueString() != "" </span><span class="cov0" title="0">{
+                var credData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Data.ValueString()), &amp;credData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse credential data JSON: %s", err),
+                        )
+                        return
+                }</span>
+
+                // Validate credential data based on type
+                <span class="cov0" title="0">if err := r.validateCredentialData(data.Type.ValueString(), credData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("data"),
+                                "Invalid Credential Data",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+
+                <span class="cov0" title="0">credential.Data = credData</span>
+        }
+
+        // Handle node access
+        <span class="cov0" title="0">if !data.NodeAccess.IsNull() </span><span class="cov0" title="0">{
+                var nodeAccess []string
+                resp.Diagnostics.Append(data.NodeAccess.ElementsAs(ctx, &amp;nodeAccess, false)...)
+                if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">credential.SharedWith = nodeAccess</span>
+        }
+
+        // Update credential via API
+        <span class="cov0" title="0">updatedCredential, err := r.client.UpdateCredential(data.ID.ValueString(), credential)
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update credential, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromCredential(&amp;data, updatedCredential)
+
+        // Save updated data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *CredentialResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) <span class="cov0" title="0">{
+        var data CredentialResourceModel
+
+        // Read Terraform prior state data into the model
+        resp.Diagnostics.Append(req.State.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Delete credential via API
+        <span class="cov0" title="0">err := r.client.DeleteCredential(data.ID.ValueString())
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete credential, got error: %s", err))
+                return
+        }</span>
+}
+
+func (r *CredentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) <span class="cov0" title="0">{
+        resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}</span>
+
+// validateCredentialType validates that the credential type is supported
+func (r *CredentialResource) validateCredentialType(credType string) error <span class="cov0" title="0">{
+        if credType == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("credential type is required")
+        }</span>
+
+        <span class="cov0" title="0">if !slices.Contains(supportedCredentialTypes, credType) </span><span class="cov0" title="0">{
+                return fmt.Errorf("unsupported credential type: %s. Supported types: %s", credType, strings.Join(supportedCredentialTypes, ", "))
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// validateCredentialData validates the credential data based on type
+func (r *CredentialResource) validateCredentialData(credType string, data map[string]interface{}) error <span class="cov0" title="0">{
+        if data == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        // Type-specific validation
+        <span class="cov0" title="0">switch credType </span>{
+        case "httpBasicAuth":<span class="cov0" title="0">
+                if _, hasUser := data["user"]; !hasUser </span><span class="cov0" title="0">{
+                        return fmt.Errorf("httpBasicAuth credential requires 'user' field")
+                }</span>
+                <span class="cov0" title="0">if _, hasPassword := data["password"]; !hasPassword </span><span class="cov0" title="0">{
+                        return fmt.Errorf("httpBasicAuth credential requires 'password' field")
+                }</span>
+
+        case "apiKey":<span class="cov0" title="0">
+                if _, hasApiKey := data["apiKey"]; !hasApiKey </span><span class="cov0" title="0">{
+                        return fmt.Errorf("apiKey credential requires 'apiKey' field")
+                }</span>
+
+        case "oAuth2Api":<span class="cov0" title="0">
+                if _, hasClientId := data["clientId"]; !hasClientId </span><span class="cov0" title="0">{
+                        return fmt.Errorf("oAuth2Api credential requires 'clientId' field")
+                }</span>
+                <span class="cov0" title="0">if _, hasClientSecret := data["clientSecret"]; !hasClientSecret </span><span class="cov0" title="0">{
+                        return fmt.Errorf("oAuth2Api credential requires 'clientSecret' field")
+                }</span>
+
+        case "bearerTokenAuth":<span class="cov0" title="0">
+                if _, hasToken := data["token"]; !hasToken </span><span class="cov0" title="0">{
+                        return fmt.Errorf("bearerTokenAuth credential requires 'token' field")
+                }</span>
+
+        case "httpHeaderAuth":<span class="cov0" title="0">
+                if _, hasName := data["name"]; !hasName </span><span class="cov0" title="0">{
+                        return fmt.Errorf("httpHeaderAuth credential requires 'name' field")
+                }</span>
+                <span class="cov0" title="0">if _, hasValue := data["value"]; !hasValue </span><span class="cov0" title="0">{
+                        return fmt.Errorf("httpHeaderAuth credential requires 'value' field")
+                }</span>
+
+        case "awsApi":<span class="cov0" title="0">
+                if _, hasAccessKeyId := data["accessKeyId"]; !hasAccessKeyId </span><span class="cov0" title="0">{
+                        return fmt.Errorf("awsApi credential requires 'accessKeyId' field")
+                }</span>
+                <span class="cov0" title="0">if _, hasSecretAccessKey := data["secretAccessKey"]; !hasSecretAccessKey </span><span class="cov0" title="0">{
+                        return fmt.Errorf("awsApi credential requires 'secretAccessKey' field")
+                }</span>
+
+        case "googleOAuth2Api":<span class="cov0" title="0">
+                if _, hasClientId := data["clientId"]; !hasClientId </span><span class="cov0" title="0">{
+                        return fmt.Errorf("googleOAuth2Api credential requires 'clientId' field")
+                }</span>
+                <span class="cov0" title="0">if _, hasClientSecret := data["clientSecret"]; !hasClientSecret </span><span class="cov0" title="0">{
+                        return fmt.Errorf("googleOAuth2Api credential requires 'clientSecret' field")
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Helper function to update model from API response
+func (r *CredentialResource) updateModelFromCredential(model *CredentialResourceModel, credential *client.Credential) <span class="cov0" title="0">{
+        model.ID = types.StringValue(credential.ID)
+        model.Name = types.StringValue(credential.Name)
+        model.Type = types.StringValue(credential.Type)
+
+        // Convert credential data to JSON string (but keep it sensitive)
+        // Note: We don't include sensitive data in read operations for security
+        if len(credential.Data) &gt; 0 </span><span class="cov0" title="0">{
+                // Only update data field if it's currently set (to preserve sensitive data in state)
+                if !model.Data.IsNull() </span><span class="cov0" title="0">{
+                        if dataJSON, err := json.Marshal(credential.Data); err == nil </span><span class="cov0" title="0">{
+                                model.Data = types.StringValue(string(dataJSON))
+                        }</span>
+                }
+        }
+
+        // Handle node access / shared with
+        <span class="cov0" title="0">if credential.SharedWith != nil </span><span class="cov0" title="0">{
+                nodeAccessValues := make([]attr.Value, len(credential.SharedWith))
+                for i, node := range credential.SharedWith </span><span class="cov0" title="0">{
+                        nodeAccessValues[i] = types.StringValue(node)
+                }</span>
+                <span class="cov0" title="0">model.NodeAccess = types.ListValueMust(types.StringType, nodeAccessValues)</span>
+        } else<span class="cov0" title="0"> {
+                model.NodeAccess = types.ListValueMust(types.StringType, []attr.Value{})
+        }</span>
+
+        <span class="cov0" title="0">if credential.CreatedAt != nil </span><span class="cov0" title="0">{
+                model.CreatedAt = types.StringValue(credential.CreatedAt.Format("2006-01-02T15:04:05Z"))
+        }</span>
+
+        <span class="cov0" title="0">if credential.UpdatedAt != nil </span><span class="cov0" title="0">{
+                model.UpdatedAt = types.StringValue(credential.UpdatedAt.Format("2006-01-02T15:04:05Z"))
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package provider
+
+import (
+        "context"
+        "os"
+
+        "github.com/hashicorp/terraform-plugin-framework/datasource"
+        "github.com/hashicorp/terraform-plugin-framework/function"
+        "github.com/hashicorp/terraform-plugin-framework/path"
+        "github.com/hashicorp/terraform-plugin-framework/provider"
+        "github.com/hashicorp/terraform-plugin-framework/provider/schema"
+        "github.com/hashicorp/terraform-plugin-framework/resource"
+        "github.com/hashicorp/terraform-plugin-framework/types"
+
+        "github.com/devops247-online/terraform-provider-n8n/internal/client"
+)
+
+// Ensure N8nProvider satisfies various provider interfaces.
+var _ provider.Provider = &amp;N8nProvider{}
+var _ provider.ProviderWithFunctions = &amp;N8nProvider{}
+
+// N8nProvider defines the provider implementation.
+type N8nProvider struct {
+        // version is set to the provider version on release, "dev" when the
+        // provider is built and ran locally, and "test" when running acceptance
+        // testing.
+        version string
+}
+
+// N8nProviderModel describes the provider data model.
+type N8nProviderModel struct {
+        BaseURL            types.String `tfsdk:"base_url"`
+        APIKey             types.String `tfsdk:"api_key"`
+        Email              types.String `tfsdk:"email"`
+        Password           types.String `tfsdk:"password"`
+        InsecureSkipVerify types.Bool   `tfsdk:"insecure_skip_verify"`
+}
+
+func (p *N8nProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) <span class="cov0" title="0">{
+        resp.TypeName = "n8n"
+        resp.Version = p.version
+}</span>
+
+func (p *N8nProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) <span class="cov0" title="0">{
+        resp.Schema = schema.Schema{
+                MarkdownDescription: "The n8n provider allows you to manage n8n workflows, credentials, and other resources using Infrastructure as Code.\n\n" +
+                        "n8n is a free and source-available workflow automation tool that lets you connect anything to everything via its open, fair-code model.",
+                Attributes: map[string]schema.Attribute{
+                        "base_url": schema.StringAttribute{
+                                MarkdownDescription: "The base URL of your n8n instance. Can be set via the `N8N_BASE_URL` environment variable.",
+                                Optional:            true,
+                        },
+                        "api_key": schema.StringAttribute{
+                                MarkdownDescription: "API key for authentication with n8n. Can be set via the `N8N_API_KEY` environment variable.",
+                                Optional:            true,
+                                Sensitive:           true,
+                        },
+                        "email": schema.StringAttribute{
+                                MarkdownDescription: "Email for basic authentication with n8n. Can be set via the `N8N_EMAIL` environment variable. Alternative to api_key.",
+                                Optional:            true,
+                        },
+                        "password": schema.StringAttribute{
+                                MarkdownDescription: "Password for basic authentication with n8n. Can be set via the `N8N_PASSWORD` environment variable. Alternative to api_key.",
+                                Optional:            true,
+                                Sensitive:           true,
+                        },
+                        "insecure_skip_verify": schema.BoolAttribute{
+                                MarkdownDescription: "Skip TLS certificate verification. Can be set via the `N8N_INSECURE_SKIP_VERIFY` environment variable. Defaults to false.",
+                                Optional:            true,
+                        },
+                },
+        }
+}</span>
+
+func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) <span class="cov0" title="0">{
+        var data N8nProviderModel
+
+        resp.Diagnostics.Append(req.Config.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Configuration values
+        <span class="cov0" title="0">baseURL := os.Getenv("N8N_BASE_URL")
+        apiKey := os.Getenv("N8N_API_KEY")
+        email := os.Getenv("N8N_EMAIL")
+        password := os.Getenv("N8N_PASSWORD")
+        insecureSkipVerify := os.Getenv("N8N_INSECURE_SKIP_VERIFY") == "true"
+
+        if !data.BaseURL.IsNull() </span><span class="cov0" title="0">{
+                baseURL = data.BaseURL.ValueString()
+        }</span>
+
+        <span class="cov0" title="0">if !data.APIKey.IsNull() </span><span class="cov0" title="0">{
+                apiKey = data.APIKey.ValueString()
+        }</span>
+
+        <span class="cov0" title="0">if !data.Email.IsNull() </span><span class="cov0" title="0">{
+                email = data.Email.ValueString()
+        }</span>
+
+        <span class="cov0" title="0">if !data.Password.IsNull() </span><span class="cov0" title="0">{
+                password = data.Password.ValueString()
+        }</span>
+
+        <span class="cov0" title="0">if !data.InsecureSkipVerify.IsNull() </span><span class="cov0" title="0">{
+                insecureSkipVerify = data.InsecureSkipVerify.ValueBool()
+        }</span>
+
+        // If practitioner-provided configuration is missing, add errors.
+        <span class="cov0" title="0">if baseURL == "" </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddAttributeError(
+                        path.Root("base_url"),
+                        "Missing n8n Base URL",
+                        "The provider cannot create the n8n API client as there is a missing or empty value for the n8n base URL. "+
+                                "Set the base_url attribute in the provider configuration or use the N8N_BASE_URL environment variable. "+
+                                "If either is already set, ensure the value is not empty.",
+                )
+        }</span>
+
+        <span class="cov0" title="0">if apiKey == "" &amp;&amp; (email == "" || password == "") </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddAttributeError(
+                        path.Root("api_key"),
+                        "Missing n8n Authentication",
+                        "The provider cannot create the n8n API client as there is missing authentication information. "+
+                                "Either set the api_key attribute in the provider configuration or use the N8N_API_KEY environment variable, "+
+                                "or provide both email and password for basic authentication via the N8N_EMAIL and N8N_PASSWORD environment variables.",
+                )
+        }</span>
+
+        <span class="cov0" title="0">if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Create n8n client
+        <span class="cov0" title="0">var authMethod client.AuthMethod
+        if apiKey != "" </span><span class="cov0" title="0">{
+                authMethod = &amp;client.APIKeyAuth{APIKey: apiKey}
+        }</span> else<span class="cov0" title="0"> {
+                authMethod = &amp;client.BasicAuth{Email: email, Password: password}
+        }</span>
+
+        <span class="cov0" title="0">clientConfig := &amp;client.Config{
+                BaseURL:            baseURL,
+                Auth:               authMethod,
+                InsecureSkipVerify: insecureSkipVerify,
+        }
+
+        n8nClient, err := client.NewClient(clientConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError(
+                        "Unable to Create n8n API Client",
+                        "An unexpected error occurred when creating the n8n API client. "+
+                                "If the error is not clear, please contact the provider developers.\n\n"+
+                                "n8n Client Error: "+err.Error(),
+                )
+                return
+        }</span>
+
+        // Make the n8n client available during DataSource and Resource
+        // type Configure methods.
+        <span class="cov0" title="0">resp.DataSourceData = n8nClient
+        resp.ResourceData = n8nClient</span>
+}
+
+func (p *N8nProvider) Resources(ctx context.Context) []func() resource.Resource <span class="cov0" title="0">{
+        return []func() resource.Resource{
+                NewWorkflowResource,
+                NewCredentialResource,
+        }
+}</span>
+
+func (p *N8nProvider) DataSources(ctx context.Context) []func() datasource.DataSource <span class="cov0" title="0">{
+        return []func() datasource.DataSource{
+                // Data sources will be added here as they are implemented
+        }
+}</span>
+
+func (p *N8nProvider) Functions(ctx context.Context) []func() function.Function <span class="cov0" title="0">{
+        return []func() function.Function{
+                // Functions will be added here if needed
+        }
+}</span>
+
+func New(version string) func() provider.Provider <span class="cov10" title="2">{
+        return func() provider.Provider </span><span class="cov10" title="2">{
+                return &amp;N8nProvider{
+                        version: version,
+                }
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package provider
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+
+        "github.com/hashicorp/terraform-plugin-framework/attr"
+        "github.com/hashicorp/terraform-plugin-framework/path"
+        "github.com/hashicorp/terraform-plugin-framework/resource"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+        "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+        "github.com/hashicorp/terraform-plugin-framework/types"
+
+        "github.com/devops247-online/terraform-provider-n8n/internal/client"
+)
+
+// Ensure provider defined types fully satisfy framework interfaces.
+var _ resource.Resource = &amp;WorkflowResource{}
+var _ resource.ResourceWithImportState = &amp;WorkflowResource{}
+
+func NewWorkflowResource() resource.Resource <span class="cov0" title="0">{
+        return &amp;WorkflowResource{}
+}</span>
+
+// WorkflowResource defines the resource implementation.
+type WorkflowResource struct {
+        client *client.Client
+}
+
+// WorkflowResourceModel describes the resource data model.
+type WorkflowResourceModel struct {
+        ID          types.String `tfsdk:"id"`
+        Name        types.String `tfsdk:"name"`
+        Active      types.Bool   `tfsdk:"active"`
+        Nodes       types.String `tfsdk:"nodes"`
+        Connections types.String `tfsdk:"connections"`
+        Settings    types.String `tfsdk:"settings"`
+        StaticData  types.String `tfsdk:"static_data"`
+        PinnedData  types.String `tfsdk:"pinned_data"`
+        Tags        types.List   `tfsdk:"tags"`
+        VersionID   types.String `tfsdk:"version_id"`
+        CreatedAt   types.String `tfsdk:"created_at"`
+        UpdatedAt   types.String `tfsdk:"updated_at"`
+}
+
+func (r *WorkflowResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) <span class="cov0" title="0">{
+        resp.TypeName = req.ProviderTypeName + "_workflow"
+}</span>
+
+func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) <span class="cov0" title="0">{
+        resp.Schema = schema.Schema{
+                MarkdownDescription: "Manages an n8n workflow. Workflows are the core automation units in n8n that define a series of nodes and their connections.",
+
+                Attributes: map[string]schema.Attribute{
+                        "id": schema.StringAttribute{
+                                MarkdownDescription: "Workflow identifier",
+                                Computed:            true,
+                                PlanModifiers: []planmodifier.String{
+                                        stringplanmodifier.UseStateForUnknown(),
+                                },
+                        },
+                        "name": schema.StringAttribute{
+                                MarkdownDescription: "The name of the workflow",
+                                Required:            true,
+                        },
+                        "active": schema.BoolAttribute{
+                                MarkdownDescription: "Whether the workflow is active and can be triggered",
+                                Optional:            true,
+                                Computed:            true,
+                                Default:             booldefault.StaticBool(false),
+                        },
+                        "nodes": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing the workflow nodes configuration",
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "connections": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing the workflow connections between nodes",
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "settings": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing workflow settings",
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "static_data": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing static data for the workflow",
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "pinned_data": schema.StringAttribute{
+                                MarkdownDescription: "JSON string containing pinned data for testing purposes",
+                                Optional:            true,
+                                Computed:            true,
+                        },
+                        "tags": schema.ListAttribute{
+                                MarkdownDescription: "List of tags associated with the workflow",
+                                ElementType:         types.StringType,
+                                Optional:            true,
+                                Computed:            true,
+                                Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+                        },
+                        "version_id": schema.StringAttribute{
+                                MarkdownDescription: "Version identifier of the workflow",
+                                Computed:            true,
+                        },
+                        "created_at": schema.StringAttribute{
+                                MarkdownDescription: "Timestamp when the workflow was created",
+                                Computed:            true,
+                        },
+                        "updated_at": schema.StringAttribute{
+                                MarkdownDescription: "Timestamp when the workflow was last updated",
+                                Computed:            true,
+                        },
+                },
+        }
+}</span>
+
+func (r *WorkflowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) <span class="cov0" title="0">{
+        // Prevent panic if the provider has not been configured.
+        if req.ProviderData == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">client, ok := req.ProviderData.(*client.Client)
+
+        if !ok </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError(
+                        "Unexpected Resource Configure Type",
+                        fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+                )
+
+                return
+        }</span>
+
+        <span class="cov0" title="0">r.client = client</span>
+}
+
+func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) <span class="cov0" title="0">{
+        var data WorkflowResourceModel
+
+        // Read Terraform plan data into the model
+        resp.Diagnostics.Append(req.Plan.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Create workflow object
+        <span class="cov0" title="0">workflow := &amp;client.Workflow{
+                Name:   data.Name.ValueString(),
+                Active: data.Active.ValueBool(),
+        }
+
+        // Parse and validate JSON fields if provided
+        if !data.Nodes.IsNull() &amp;&amp; data.Nodes.ValueString() != "" </span><span class="cov0" title="0">{
+                if err := r.validateWorkflowJSON(data.Nodes.ValueString(), "nodes"); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("nodes"),
+                                "Invalid Nodes JSON",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">var nodes map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Nodes.ValueString()), &amp;nodes); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("nodes"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse nodes JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Nodes = nodes</span>
+        }
+
+        <span class="cov0" title="0">if !data.Connections.IsNull() &amp;&amp; data.Connections.ValueString() != "" </span><span class="cov0" title="0">{
+                if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("connections"),
+                                "Invalid Connections JSON",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">var connections map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Connections.ValueString()), &amp;connections); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("connections"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse connections JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Connections = connections</span>
+        }
+
+        <span class="cov0" title="0">if !data.Settings.IsNull() &amp;&amp; data.Settings.ValueString() != "" </span><span class="cov0" title="0">{
+                var settings map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Settings.ValueString()), &amp;settings); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("settings"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse settings JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Settings = settings</span>
+        }
+
+        <span class="cov0" title="0">if !data.StaticData.IsNull() &amp;&amp; data.StaticData.ValueString() != "" </span><span class="cov0" title="0">{
+                var staticData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.StaticData.ValueString()), &amp;staticData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("static_data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse static_data JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.StaticData = staticData</span>
+        }
+
+        <span class="cov0" title="0">if !data.PinnedData.IsNull() &amp;&amp; data.PinnedData.ValueString() != "" </span><span class="cov0" title="0">{
+                var pinnedData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.PinnedData.ValueString()), &amp;pinnedData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("pinned_data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse pinned_data JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.PinnedData = pinnedData</span>
+        }
+
+        // Handle tags
+        <span class="cov0" title="0">if !data.Tags.IsNull() </span><span class="cov0" title="0">{
+                var tags []string
+                resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &amp;tags, false)...)
+                if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Tags = tags</span>
+        }
+
+        // Create workflow via API
+        <span class="cov0" title="0">createdWorkflow, err := r.client.CreateWorkflow(workflow)
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create workflow, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromWorkflow(&amp;data, createdWorkflow)
+
+        // Save data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *WorkflowResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) <span class="cov0" title="0">{
+        var data WorkflowResourceModel
+
+        // Read Terraform prior state data into the model
+        resp.Diagnostics.Append(req.State.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Get workflow from API
+        <span class="cov0" title="0">workflow, err := r.client.GetWorkflow(data.ID.ValueString())
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read workflow, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromWorkflow(&amp;data, workflow)
+
+        // Save updated data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) <span class="cov0" title="0">{
+        var data WorkflowResourceModel
+
+        // Read Terraform plan data into the model
+        resp.Diagnostics.Append(req.Plan.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Create workflow object for update
+        <span class="cov0" title="0">workflow := &amp;client.Workflow{
+                Name:   data.Name.ValueString(),
+                Active: data.Active.ValueBool(),
+        }
+
+        // Parse and validate JSON fields if provided (similar to Create method)
+        if !data.Nodes.IsNull() &amp;&amp; data.Nodes.ValueString() != "" </span><span class="cov0" title="0">{
+                if err := r.validateWorkflowJSON(data.Nodes.ValueString(), "nodes"); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("nodes"),
+                                "Invalid Nodes JSON",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">var nodes map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Nodes.ValueString()), &amp;nodes); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("nodes"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse nodes JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Nodes = nodes</span>
+        }
+
+        <span class="cov0" title="0">if !data.Connections.IsNull() &amp;&amp; data.Connections.ValueString() != "" </span><span class="cov0" title="0">{
+                if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("connections"),
+                                "Invalid Connections JSON",
+                                err.Error(),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">var connections map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Connections.ValueString()), &amp;connections); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("connections"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse connections JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Connections = connections</span>
+        }
+
+        <span class="cov0" title="0">if !data.Settings.IsNull() &amp;&amp; data.Settings.ValueString() != "" </span><span class="cov0" title="0">{
+                var settings map[string]interface{}
+                if err := json.Unmarshal([]byte(data.Settings.ValueString()), &amp;settings); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("settings"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse settings JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Settings = settings</span>
+        }
+
+        <span class="cov0" title="0">if !data.StaticData.IsNull() &amp;&amp; data.StaticData.ValueString() != "" </span><span class="cov0" title="0">{
+                var staticData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.StaticData.ValueString()), &amp;staticData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("static_data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse static_data JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.StaticData = staticData</span>
+        }
+
+        <span class="cov0" title="0">if !data.PinnedData.IsNull() &amp;&amp; data.PinnedData.ValueString() != "" </span><span class="cov0" title="0">{
+                var pinnedData map[string]interface{}
+                if err := json.Unmarshal([]byte(data.PinnedData.ValueString()), &amp;pinnedData); err != nil </span><span class="cov0" title="0">{
+                        resp.Diagnostics.AddAttributeError(
+                                path.Root("pinned_data"),
+                                "Invalid JSON",
+                                fmt.Sprintf("Unable to parse pinned_data JSON: %s", err),
+                        )
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.PinnedData = pinnedData</span>
+        }
+
+        // Handle tags
+        <span class="cov0" title="0">if !data.Tags.IsNull() </span><span class="cov0" title="0">{
+                var tags []string
+                resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &amp;tags, false)...)
+                if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">workflow.Tags = tags</span>
+        }
+
+        // Update workflow via API
+        <span class="cov0" title="0">updatedWorkflow, err := r.client.UpdateWorkflow(data.ID.ValueString(), workflow)
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update workflow, got error: %s", err))
+                return
+        }</span>
+
+        // Update model with response data
+        <span class="cov0" title="0">r.updateModelFromWorkflow(&amp;data, updatedWorkflow)
+
+        // Save updated data into Terraform state
+        resp.Diagnostics.Append(resp.State.Set(ctx, &amp;data)...)</span>
+}
+
+func (r *WorkflowResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) <span class="cov0" title="0">{
+        var data WorkflowResourceModel
+
+        // Read Terraform prior state data into the model
+        resp.Diagnostics.Append(req.State.Get(ctx, &amp;data)...)
+
+        if resp.Diagnostics.HasError() </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        // Delete workflow via API
+        <span class="cov0" title="0">err := r.client.DeleteWorkflow(data.ID.ValueString())
+        if err != nil </span><span class="cov0" title="0">{
+                resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete workflow, got error: %s", err))
+                return
+        }</span>
+}
+
+func (r *WorkflowResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) <span class="cov0" title="0">{
+        resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}</span>
+
+// validateWorkflowJSON validates the JSON structure of workflow fields
+func (r *WorkflowResource) validateWorkflowJSON(jsonStr string, fieldName string) error <span class="cov0" title="0">{
+        if jsonStr == "" </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">var result map[string]interface{}
+        if err := json.Unmarshal([]byte(jsonStr), &amp;result); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("invalid JSON in %s: %w", fieldName, err)
+        }</span>
+
+        // Additional validation for specific fields
+        <span class="cov0" title="0">switch fieldName </span>{
+        case "nodes":<span class="cov0" title="0">
+                // Validate nodes structure - should be a map where each key represents a node
+                for nodeKey, nodeValue := range result </span><span class="cov0" title="0">{
+                        if nodeMap, ok := nodeValue.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                                // Check for required node properties
+                                if _, hasType := nodeMap["type"]; !hasType </span><span class="cov0" title="0">{
+                                        return fmt.Errorf("node %s is missing required 'type' field", nodeKey)
+                                }</span>
+                        } else<span class="cov0" title="0"> {
+                                return fmt.Errorf("node %s must be an object", nodeKey)
+                        }</span>
+                }
+        case "connections":<span class="cov0" title="0">
+                // Validate connections structure - should be a map of arrays
+                for sourceNode, connections := range result </span><span class="cov0" title="0">{
+                        if connArray, ok := connections.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                                for outputType, outputConnections := range connArray </span><span class="cov0" title="0">{
+                                        if connectionsList, ok := outputConnections.([]interface{}); ok </span><span class="cov0" title="0">{
+                                                for i, conn := range connectionsList </span><span class="cov0" title="0">{
+                                                        if connMap, ok := conn.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                                                                if _, hasNode := connMap["node"]; !hasNode </span><span class="cov0" title="0">{
+                                                                        return fmt.Errorf("connection %d from %s.%s is missing required 'node' field", i, sourceNode, outputType)
+                                                                }</span>
+                                                                <span class="cov0" title="0">if _, hasType := connMap["type"]; !hasType </span><span class="cov0" title="0">{
+                                                                        return fmt.Errorf("connection %d from %s.%s is missing required 'type' field", i, sourceNode, outputType)
+                                                                }</span>
+                                                                <span class="cov0" title="0">if _, hasIndex := connMap["index"]; !hasIndex </span><span class="cov0" title="0">{
+                                                                        return fmt.Errorf("connection %d from %s.%s is missing required 'index' field", i, sourceNode, outputType)
+                                                                }</span>
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Helper function to update model from API response
+func (r *WorkflowResource) updateModelFromWorkflow(model *WorkflowResourceModel, workflow *client.Workflow) <span class="cov0" title="0">{
+        model.ID = types.StringValue(workflow.ID)
+        model.Name = types.StringValue(workflow.Name)
+        model.Active = types.BoolValue(workflow.Active)
+
+        // Convert JSON fields to strings
+        if workflow.Nodes != nil </span><span class="cov0" title="0">{
+                if nodesJSON, err := json.Marshal(workflow.Nodes); err == nil </span><span class="cov0" title="0">{
+                        model.Nodes = types.StringValue(string(nodesJSON))
+                }</span>
+        }
+
+        <span class="cov0" title="0">if workflow.Connections != nil </span><span class="cov0" title="0">{
+                if connectionsJSON, err := json.Marshal(workflow.Connections); err == nil </span><span class="cov0" title="0">{
+                        model.Connections = types.StringValue(string(connectionsJSON))
+                }</span>
+        }
+
+        <span class="cov0" title="0">if workflow.Settings != nil </span><span class="cov0" title="0">{
+                if settingsJSON, err := json.Marshal(workflow.Settings); err == nil </span><span class="cov0" title="0">{
+                        model.Settings = types.StringValue(string(settingsJSON))
+                }</span>
+        }
+
+        <span class="cov0" title="0">if workflow.StaticData != nil </span><span class="cov0" title="0">{
+                if staticDataJSON, err := json.Marshal(workflow.StaticData); err == nil </span><span class="cov0" title="0">{
+                        model.StaticData = types.StringValue(string(staticDataJSON))
+                }</span>
+        }
+
+        <span class="cov0" title="0">if workflow.PinnedData != nil </span><span class="cov0" title="0">{
+                if pinnedDataJSON, err := json.Marshal(workflow.PinnedData); err == nil </span><span class="cov0" title="0">{
+                        model.PinnedData = types.StringValue(string(pinnedDataJSON))
+                }</span>
+        }
+
+        // Handle tags
+        <span class="cov0" title="0">if workflow.Tags != nil </span><span class="cov0" title="0">{
+                tagValues := make([]attr.Value, len(workflow.Tags))
+                for i, tag := range workflow.Tags </span><span class="cov0" title="0">{
+                        tagValues[i] = types.StringValue(tag)
+                }</span>
+                <span class="cov0" title="0">model.Tags = types.ListValueMust(types.StringType, tagValues)</span>
+        }
+
+        <span class="cov0" title="0">if workflow.VersionID != "" </span><span class="cov0" title="0">{
+                model.VersionID = types.StringValue(workflow.VersionID)
+        }</span>
+
+        <span class="cov0" title="0">if workflow.CreatedAt != nil </span><span class="cov0" title="0">{
+                model.CreatedAt = types.StringValue(workflow.CreatedAt.Format("2006-01-02T15:04:05Z"))
+        }</span>
+
+        <span class="cov0" title="0">if workflow.UpdatedAt != nil </span><span class="cov0" title="0">{
+                model.UpdatedAt = types.StringValue(workflow.UpdatedAt.Format("2006-01-02T15:04:05Z"))
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package main
+
+import (
+        "context"
+        "flag"
+        "log"
+
+        "github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+        "github.com/devops247-online/terraform-provider-n8n/internal/provider"
+)
+
+// Run "go generate" to format example terraform files and generate the docs
+//go:generate terraform fmt -recursive ./examples/
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+
+var (
+        // version is set via build ldflags
+        version string = "dev"
+)
+
+func main() <span class="cov0" title="0">{
+        var debug bool
+
+        flag.BoolVar(&amp;debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
+        flag.Parse()
+
+        opts := providerserver.ServeOpts{
+                Address: "registry.terraform.io/devops247-online/n8n",
+                Debug:   debug,
+        }
+
+        err := providerserver.Serve(context.Background(), provider.New(version), opts)
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err.Error())
+        }</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

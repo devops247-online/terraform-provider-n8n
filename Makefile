@@ -36,6 +36,10 @@ test:
 testacc:
 	TF_ACC=1 $(GOTEST) -v ./... -timeout 120m
 
+# Run acceptance tests with Docker n8n instance
+testacc-docker:
+	./scripts/test-acceptance.sh
+
 install: build
 	mkdir -p $(TERRAFORM_PLUGINS_DIR)/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)
 	cp $(BINARY_NAME) $(TERRAFORM_PLUGINS_DIR)/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)/
@@ -64,12 +68,28 @@ docs:
 tools:
 	go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/securecodewarrior/sast-scan/cmd/gosec@latest
+	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 # Development helpers
 dev-setup: tools tidy
 
+# Security scanning
+security: gosec vulncheck
+
+gosec:
+	gosec -quiet ./...
+
+vulncheck:
+	govulncheck ./...
+
+# Coverage reporting
+coverage:
+	$(GOTEST) -v -coverprofile=coverage.out -covermode=atomic ./...
+	$(GOCMD) tool cover -html=coverage.out -o coverage.html
+
 # Release preparation
-pre-release: fmt vet lint test docs
+pre-release: fmt vet lint test security docs coverage
 
 # Local testing
 local-install: build
