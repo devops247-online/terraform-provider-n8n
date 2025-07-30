@@ -8,6 +8,7 @@ import (
 
 func TestAccLDAPConfigResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -47,6 +48,7 @@ func TestAccLDAPConfigResource(t *testing.T) {
 
 func TestAccLDAPConfigResource_WithTLS(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with TLS
@@ -64,6 +66,7 @@ func TestAccLDAPConfigResource_WithTLS(t *testing.T) {
 
 func TestAccLDAPConfigResource_WithGroups(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with group configuration
@@ -80,6 +83,7 @@ func TestAccLDAPConfigResource_WithGroups(t *testing.T) {
 
 func TestAccLDAPConfigResource_MinimalConfig(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing with minimal required config
