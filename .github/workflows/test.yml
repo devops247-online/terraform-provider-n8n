@@ -108,12 +108,12 @@ jobs:
         args: --timeout=5m
     
     - name: Run gosec security scanner
-      uses: securecodewarrior/github-action-gosec@master
+      uses: securecodewarrior/github-action-gosec@v1
       with:
         args: '-no-fail -fmt sarif -out gosec.sarif ./...'
     
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: gosec.sarif
 
@@ -227,6 +227,11 @@ jobs:
     
     - name: Install tfplugindocs
       run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+    
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.0.0
     
     - name: Generate documentation
       run: make docs

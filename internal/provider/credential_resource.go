@@ -139,7 +139,6 @@ func (r *CredentialResource) Schema(ctx context.Context, req resource.SchemaRequ
 				MarkdownDescription: "List of node names that can access this credential. If empty, all nodes can access it.",
 				ElementType:         types.StringType,
 				Optional:            true,
-				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "Timestamp when the credential was created",
@@ -225,7 +224,7 @@ func (r *CredentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Handle node access
-	if !data.NodeAccess.IsNull() {
+	if !data.NodeAccess.IsNull() && !data.NodeAccess.IsUnknown() {
 		var nodeAccess []string
 		resp.Diagnostics.Append(data.NodeAccess.ElementsAs(ctx, &nodeAccess, false)...)
 		if resp.Diagnostics.HasError() {
@@ -314,7 +313,7 @@ func (r *CredentialResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Handle node access
-	if !data.NodeAccess.IsNull() {
+	if !data.NodeAccess.IsNull() && !data.NodeAccess.IsUnknown() {
 		var nodeAccess []string
 		resp.Diagnostics.Append(data.NodeAccess.ElementsAs(ctx, &nodeAccess, false)...)
 		if resp.Diagnostics.HasError() {
@@ -452,14 +451,15 @@ func (r *CredentialResource) updateModelFromCredential(model *CredentialResource
 	}
 
 	// Handle node access / shared with
-	if credential.SharedWith != nil {
+	if len(credential.SharedWith) > 0 {
 		nodeAccessValues := make([]attr.Value, len(credential.SharedWith))
 		for i, node := range credential.SharedWith {
 			nodeAccessValues[i] = types.StringValue(node)
 		}
 		model.NodeAccess = types.ListValueMust(types.StringType, nodeAccessValues)
 	} else {
-		model.NodeAccess = types.ListValueMust(types.StringType, []attr.Value{})
+		// Set as null List when no shared access is configured
+		model.NodeAccess = types.ListNull(types.StringType)
 	}
 
 	if credential.CreatedAt != nil {
