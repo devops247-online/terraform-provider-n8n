@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -13,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 
 	"github.com/devops247-online/terraform-provider-n8n/internal/client"
 )
@@ -315,7 +315,7 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Handle other JSON fields...
-	
+
 	// Handle tags
 	if !data.Tags.IsNull() {
 		var tags []string

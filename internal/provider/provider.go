@@ -29,11 +29,11 @@ type N8nProvider struct {
 
 // N8nProviderModel describes the provider data model.
 type N8nProviderModel struct {
-	BaseURL types.String `tfsdk:"base_url"`
-	APIKey  types.String `tfsdk:"api_key"`
-	Email   types.String `tfsdk:"email"`
-	Password types.String `tfsdk:"password"`
-	InsecureSkipVerify types.Bool `tfsdk:"insecure_skip_verify"`
+	BaseURL            types.String `tfsdk:"base_url"`
+	APIKey             types.String `tfsdk:"api_key"`
+	Email              types.String `tfsdk:"email"`
+	Password           types.String `tfsdk:"password"`
+	InsecureSkipVerify types.Bool   `tfsdk:"insecure_skip_verify"`
 }
 
 func (p *N8nProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {

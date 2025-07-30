@@ -70,12 +70,12 @@ func TestNewClient(t *testing.T) {
 func TestAPIKeyAuth(t *testing.T) {
 	auth := &APIKeyAuth{APIKey: "test-key"}
 	req, _ := http.NewRequest("GET", "https://example.com", nil)
-	
+
 	err := auth.ApplyAuth(req)
 	if err != nil {
 		t.Errorf("APIKeyAuth.ApplyAuth() error = %v", err)
 	}
-	
+
 	if got := req.Header.Get("X-N8N-API-KEY"); got != "test-key" {
 		t.Errorf("APIKeyAuth.ApplyAuth() header = %v, want %v", got, "test-key")
 	}
@@ -84,12 +84,12 @@ func TestAPIKeyAuth(t *testing.T) {
 func TestBasicAuth(t *testing.T) {
 	auth := &BasicAuth{Email: "test@example.com", Password: "password"}
 	req, _ := http.NewRequest("GET", "https://example.com", nil)
-	
+
 	err := auth.ApplyAuth(req)
 	if err != nil {
 		t.Errorf("BasicAuth.ApplyAuth() error = %v", err)
 	}
-	
+
 	username, password, ok := req.BasicAuth()
 	if !ok {
 		t.Error("BasicAuth.ApplyAuth() did not set basic auth")
@@ -107,13 +107,13 @@ func TestClient_doRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-N8N-API-KEY") != "test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"code": 401, "message": "Unauthorized"}`))
+			_, _ = w.Write([]byte(`{"code": 401, "message": "Unauthorized"}`))
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id": "1", "name": "test"}`))
+		_, _ = w.Write([]byte(`{"id": "1", "name": "test"}`))
 	}))
 	defer server.Close()
 
@@ -144,7 +144,7 @@ func TestClient_ErrorHandling(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"code": 400, "message": "Bad Request", "details": "Test error"}`))
+		_, _ = w.Write([]byte(`{"code": 400, "message": "Bad Request", "details": "Test error"}`))
 	}))
 	defer server.Close()
 
@@ -160,7 +160,7 @@ func TestClient_ErrorHandling(t *testing.T) {
 
 	var result map[string]interface{}
 	err = client.Get("test", &result)
-	
+
 	if err == nil {
 		t.Error("Client.Get() expected error, got nil")
 	}

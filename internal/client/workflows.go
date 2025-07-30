@@ -25,11 +25,11 @@ type Workflow struct {
 
 // WorkflowListOptions represents options for listing workflows
 type WorkflowListOptions struct {
-	Active   *bool
-	Tags     []string
+	Active    *bool
+	Tags      []string
 	ProjectID string
-	Limit    int
-	Offset   int
+	Limit     int
+	Offset    int
 }
 
 // WorkflowListResponse represents the response from listing workflows
@@ -41,32 +41,32 @@ type WorkflowListResponse struct {
 // GetWorkflows retrieves a list of workflows
 func (c *Client) GetWorkflows(options *WorkflowListOptions) (*WorkflowListResponse, error) {
 	path := "workflows"
-	
+
 	if options != nil {
 		params := url.Values{}
-		
+
 		if options.Active != nil {
 			params.Set("active", strconv.FormatBool(*options.Active))
 		}
-		
+
 		if len(options.Tags) > 0 {
 			for _, tag := range options.Tags {
 				params.Add("tags", tag)
 			}
 		}
-		
+
 		if options.ProjectID != "" {
 			params.Set("projectId", options.ProjectID)
 		}
-		
+
 		if options.Limit > 0 {
 			params.Set("limit", strconv.Itoa(options.Limit))
 		}
-		
+
 		if options.Offset > 0 {
 			params.Set("offset", strconv.Itoa(options.Offset))
 		}
-		
+
 		if len(params) > 0 {
 			path += "?" + params.Encode()
 		}
@@ -88,7 +88,7 @@ func (c *Client) GetWorkflow(id string) (*Workflow, error) {
 	}
 
 	path := fmt.Sprintf("workflows/%s", id)
-	
+
 	var workflow Workflow
 	err := c.Get(path, &workflow)
 	if err != nil {
@@ -128,7 +128,7 @@ func (c *Client) UpdateWorkflow(id string, workflow *Workflow) (*Workflow, error
 	}
 
 	path := fmt.Sprintf("workflows/%s", id)
-	
+
 	var result Workflow
 	err := c.Put(path, workflow, &result)
 	if err != nil {
@@ -145,7 +145,7 @@ func (c *Client) DeleteWorkflow(id string) error {
 	}
 
 	path := fmt.Sprintf("workflows/%s", id)
-	
+
 	err := c.Delete(path)
 	if err != nil {
 		return fmt.Errorf("failed to delete workflow %s: %w", id, err)
@@ -161,7 +161,7 @@ func (c *Client) ActivateWorkflow(id string) (*Workflow, error) {
 	}
 
 	path := fmt.Sprintf("workflows/%s/activate", id)
-	
+
 	var result Workflow
 	err := c.Post(path, nil, &result)
 	if err != nil {
@@ -178,7 +178,7 @@ func (c *Client) DeactivateWorkflow(id string) (*Workflow, error) {
 	}
 
 	path := fmt.Sprintf("workflows/%s/deactivate", id)
-	
+
 	var result Workflow
 	err := c.Post(path, nil, &result)
 	if err != nil {
