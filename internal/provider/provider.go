@@ -167,6 +167,7 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 func (p *N8nProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewWorkflowResource,
+		NewCredentialResource,
 	}
 }
 
