@@ -169,6 +169,9 @@ func (p *N8nProvider) Resources(ctx context.Context) []func() resource.Resource 
 		NewWorkflowResource,
 		NewCredentialResource,
 		NewUserResource,
+		NewProjectResource,
+		NewProjectUserResource,
+		NewLDAPConfigResource,
 	}
 }
 

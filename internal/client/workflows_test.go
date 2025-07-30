@@ -36,7 +36,7 @@ func TestClient_GetWorkflows(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockWorkflows)
+		_ = json.NewEncoder(w).Encode(mockWorkflows)
 	}))
 	defer server.Close()
 
@@ -93,7 +93,7 @@ func TestClient_GetWorkflowsWithOptions(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(WorkflowListResponse{Data: []Workflow{}})
+		_ = json.NewEncoder(w).Encode(WorkflowListResponse{Data: []Workflow{}})
 	}))
 	defer server.Close()
 
@@ -140,7 +140,7 @@ func TestClient_GetWorkflow(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockWorkflow)
+		_ = json.NewEncoder(w).Encode(mockWorkflow)
 	}))
 	defer server.Close()
 
@@ -200,14 +200,14 @@ func TestClient_CreateWorkflow(t *testing.T) {
 		}
 
 		var receivedWorkflow Workflow
-		json.NewDecoder(r.Body).Decode(&receivedWorkflow)
+		_ = json.NewDecoder(r.Body).Decode(&receivedWorkflow)
 		if receivedWorkflow.Name != "New Workflow" {
 			t.Errorf("Expected name 'New Workflow', got %s", receivedWorkflow.Name)
 		}
 
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
@@ -284,13 +284,13 @@ func TestClient_UpdateWorkflow(t *testing.T) {
 		}
 
 		var receivedWorkflow Workflow
-		json.NewDecoder(r.Body).Decode(&receivedWorkflow)
+		_ = json.NewDecoder(r.Body).Decode(&receivedWorkflow)
 		if receivedWorkflow.Name != "Updated Workflow" {
 			t.Errorf("Expected name 'Updated Workflow', got %s", receivedWorkflow.Name)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
@@ -405,7 +405,7 @@ func TestClient_ActivateWorkflow(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
@@ -459,7 +459,7 @@ func TestClient_DeactivateWorkflow(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
