@@ -1,0 +1,7 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+# Your n8n instance URL
+n8n_base_url = "http://localhost:5678"
+
+# Your n8n API key (create one in n8n Settings > API Keys)
+n8n_api_key = "your-api-key-here"
