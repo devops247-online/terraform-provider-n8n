@@ -168,12 +168,13 @@ func (p *N8nProvider) Resources(ctx context.Context) []func() resource.Resource 
 	return []func() resource.Resource{
 		NewWorkflowResource,
 		NewCredentialResource,
+		NewUserResource,
 	}
 }
 
 func (p *N8nProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// Data sources will be added here as they are implemented
+		NewUserDataSource,
 	}
 }
 
