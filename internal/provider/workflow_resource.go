@@ -157,8 +157,16 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 		Active: data.Active.ValueBool(),
 	}
 
-	// Parse JSON fields if provided
+	// Parse and validate JSON fields if provided
 	if !data.Nodes.IsNull() && data.Nodes.ValueString() != "" {
+		if err := r.validateWorkflowJSON(data.Nodes.ValueString(), "nodes"); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("nodes"),
+				"Invalid Nodes JSON",
+				err.Error(),
+			)
+			return
+		}
 		var nodes map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Nodes.ValueString()), &nodes); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -172,6 +180,14 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	if !data.Connections.IsNull() && data.Connections.ValueString() != "" {
+		if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("connections"),
+				"Invalid Connections JSON",
+				err.Error(),
+			)
+			return
+		}
 		var connections map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Connections.ValueString()), &connections); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -287,8 +303,16 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 		Active: data.Active.ValueBool(),
 	}
 
-	// Parse JSON fields if provided (similar to Create method)
+	// Parse and validate JSON fields if provided (similar to Create method)
 	if !data.Nodes.IsNull() && data.Nodes.ValueString() != "" {
+		if err := r.validateWorkflowJSON(data.Nodes.ValueString(), "nodes"); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("nodes"),
+				"Invalid Nodes JSON",
+				err.Error(),
+			)
+			return
+		}
 		var nodes map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Nodes.ValueString()), &nodes); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -302,6 +326,14 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	if !data.Connections.IsNull() && data.Connections.ValueString() != "" {
+		if err := r.validateWorkflowJSON(data.Connections.ValueString(), "connections"); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("connections"),
+				"Invalid Connections JSON",
+				err.Error(),
+			)
+			return
+		}
 		var connections map[string]interface{}
 		if err := json.Unmarshal([]byte(data.Connections.ValueString()), &connections); err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -314,7 +346,44 @@ func (r *WorkflowResource) Update(ctx context.Context, req resource.UpdateReques
 		workflow.Connections = connections
 	}
 
-	// Handle other JSON fields...
+	if !data.Settings.IsNull() && data.Settings.ValueString() != "" {
+		var settings map[string]interface{}
+		if err := json.Unmarshal([]byte(data.Settings.ValueString()), &settings); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("settings"),
+				"Invalid JSON",
+				fmt.Sprintf("Unable to parse settings JSON: %s", err),
+			)
+			return
+		}
+		workflow.Settings = settings
+	}
+
+	if !data.StaticData.IsNull() && data.StaticData.ValueString() != "" {
+		var staticData map[string]interface{}
+		if err := json.Unmarshal([]byte(data.StaticData.ValueString()), &staticData); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("static_data"),
+				"Invalid JSON",
+				fmt.Sprintf("Unable to parse static_data JSON: %s", err),
+			)
+			return
+		}
+		workflow.StaticData = staticData
+	}
+
+	if !data.PinnedData.IsNull() && data.PinnedData.ValueString() != "" {
+		var pinnedData map[string]interface{}
+		if err := json.Unmarshal([]byte(data.PinnedData.ValueString()), &pinnedData); err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("pinned_data"),
+				"Invalid JSON",
+				fmt.Sprintf("Unable to parse pinned_data JSON: %s", err),
+			)
+			return
+		}
+		workflow.PinnedData = pinnedData
+	}
 
 	// Handle tags
 	if !data.Tags.IsNull() {
@@ -360,6 +429,59 @@ func (r *WorkflowResource) Delete(ctx context.Context, req resource.DeleteReques
 
 func (r *WorkflowResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// validateWorkflowJSON validates the JSON structure of workflow fields
+func (r *WorkflowResource) validateWorkflowJSON(jsonStr string, fieldName string) error {
+	if jsonStr == "" {
+		return nil
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return fmt.Errorf("invalid JSON in %s: %w", fieldName, err)
+	}
+
+	// Additional validation for specific fields
+	switch fieldName {
+	case "nodes":
+		// Validate nodes structure - should be a map where each key represents a node
+		for nodeKey, nodeValue := range result {
+			if nodeMap, ok := nodeValue.(map[string]interface{}); ok {
+				// Check for required node properties
+				if _, hasType := nodeMap["type"]; !hasType {
+					return fmt.Errorf("node %s is missing required 'type' field", nodeKey)
+				}
+			} else {
+				return fmt.Errorf("node %s must be an object", nodeKey)
+			}
+		}
+	case "connections":
+		// Validate connections structure - should be a map of arrays
+		for sourceNode, connections := range result {
+			if connArray, ok := connections.(map[string]interface{}); ok {
+				for outputType, outputConnections := range connArray {
+					if connectionsList, ok := outputConnections.([]interface{}); ok {
+						for i, conn := range connectionsList {
+							if connMap, ok := conn.(map[string]interface{}); ok {
+								if _, hasNode := connMap["node"]; !hasNode {
+									return fmt.Errorf("connection %d from %s.%s is missing required 'node' field", i, sourceNode, outputType)
+								}
+								if _, hasType := connMap["type"]; !hasType {
+									return fmt.Errorf("connection %d from %s.%s is missing required 'type' field", i, sourceNode, outputType)
+								}
+								if _, hasIndex := connMap["index"]; !hasIndex {
+									return fmt.Errorf("connection %d from %s.%s is missing required 'index' field", i, sourceNode, outputType)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Helper function to update model from API response
