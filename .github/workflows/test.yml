@@ -277,8 +277,8 @@ jobs:
       run: |
         echo "Setting up n8n initial owner and API access..."
         
-        # Function to setup n8n owner using both REST API and management endpoints
-        setup_n8n_owner() {
+        # Try a simplified approach - use the UI endpoint for setup
+        setup_via_ui_endpoint() {
           local setup_payload='{
             "email": "admin@example.com",
             "firstName": "Admin",
@@ -286,19 +286,11 @@ jobs:
             "password": "Admin123!"
           }'
           
-          echo "Attempting n8n owner setup via REST API..."
+          echo "Attempting n8n owner setup via web UI setup endpoint..."
           
-          # First, try to check if n8n is already set up
-          status_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            http://localhost:5678/rest/login 2>/dev/null)
-          
-          status_http_code=$(echo "$status_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          
-          echo "Login endpoint status: $status_http_code"
-          
-          # Try the owner setup endpoint with proper payload structure
+          # Try the main web UI setup endpoint (commonly used in n8n 1.x)
           setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/rest/owner/setup \
+            -X POST http://localhost:5678/api/v1/owner/setup \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -d "$setup_payload" 2>/dev/null)
@@ -306,199 +298,131 @@ jobs:
           setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
           setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
           
-          echo "Setup API (/rest/owner/setup) response code: $setup_http_code"
-          echo "Setup API response body: $setup_body"
+          echo "UI Setup API (/api/v1/owner/setup) response code: $setup_http_code"
+          echo "UI Setup API response body: $setup_body"
           
           if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
-            echo "✅ n8n owner setup successful via REST API"
+            echo "✅ n8n owner setup successful via UI API"
             return 0
           elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized\|already.*exists"; then
             echo "ℹ️  n8n owner already exists, continuing..."
             return 0
           fi
           
-          # Try alternative endpoint for older versions (/rest/owner)
-          echo "Trying alternative owner setup endpoint..."
+          # Try /api/v1/setup endpoint  
           setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/rest/owner \
+            -X POST http://localhost:5678/api/v1/setup \
             -H "Content-Type: application/json" \
             -d "$setup_payload" 2>/dev/null)
           
           setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
           setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
           
-          echo "Alternative setup API (/rest/owner) response code: $setup_http_code"
-          echo "Alternative setup API response body: $setup_body"
+          echo "General setup API (/api/v1/setup) response code: $setup_http_code"
+          echo "General setup API response body: $setup_body"
           
           if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
-            echo "✅ n8n owner setup successful via alternative API"
-            return 0
-          elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized"; then
-            echo "ℹ️  n8n owner already exists, continuing..."
+            echo "✅ n8n owner setup successful via general setup API"
             return 0
           fi
           
-          # Try management endpoint (for very old versions)
-          echo "Trying management endpoint..."
-          setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/rest/users \
-            -H "Content-Type: application/json" \
-            -d "$setup_payload" 2>/dev/null)
-          
-          setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-          
-          echo "Management API (/rest/users) response code: $setup_http_code"
-          echo "Management API response body: $setup_body"
-          
-          if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
-            echo "✅ n8n owner setup successful via management API"
-            return 0
-          fi
-          
-          echo "⚠️  All setup API endpoints failed"
+          echo "⚠️  UI setup endpoints failed"
           return 1
         }
         
-        # Function to verify API access using session-based authentication
-        verify_api_access() {
-          echo "Verifying API access using session authentication..."
+        # Test authentication with login
+        test_authentication() {
+          echo "Testing authentication with login..."
           
           # First, log in to get session cookie
           login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/rest/login \
+            -X POST http://localhost:5678/api/v1/auth/login \
             -H "Content-Type: application/json" \
             -c /tmp/n8n_cookies.txt \
             -d '{"email": "admin@example.com", "password": "Admin123!"}' 2>/dev/null)
           
           login_http_code=$(echo "$login_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          login_body=$(echo "$login_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-          
-          echo "Login response code: $login_http_code"
-          echo "Login response: $login_body"
           
           if [ "$login_http_code" != "200" ]; then
-            echo "⚠️  Login failed, trying API key fallback..."
+            # Try alternative login endpoint
+            login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X POST http://localhost:5678/api/v1/login \
+              -H "Content-Type: application/json" \
+              -c /tmp/n8n_cookies.txt \
+              -d '{"email": "admin@example.com", "password": "Admin123!"}' 2>/dev/null)
             
-            # Fallback to API key authentication
+            login_http_code=$(echo "$login_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          fi
+          
+          echo "Login response code: $login_http_code"
+          
+          if [ "$login_http_code" = "200" ]; then
+            echo "✅ Login successful, testing API access..."
+            
+            # Try accessing workflows with session cookie
             api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-              -H "X-N8N-API-KEY: test-api-key" \
+              -b /tmp/n8n_cookies.txt \
               http://localhost:5678/api/v1/workflows 2>/dev/null)
             
             api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
             
             if [ "$api_http_code" = "200" ]; then
-              echo "✅ API key authentication successful"
+              echo "✅ Session-based API access works"
+              
+              # Try to generate an API key
+              api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+                -X POST http://localhost:5678/api/v1/me/api-key \
+                -b /tmp/n8n_cookies.txt \
+                -H "Content-Type: application/json" \
+                -d '{"name": "terraform-provider"}' 2>/dev/null)
+              
+              api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+              api_key_body=$(echo "$api_key_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+              
+              echo "API key generation response code: $api_key_http_code"
+              
+              if [ "$api_key_http_code" = "200" ] || [ "$api_key_http_code" = "201" ]; then
+                echo "✅ API key generated successfully"
+                echo "$api_key_body"
+              fi
+              
               return 0
             fi
-            
-            echo "❌ Both session and API key authentication failed"
-            return 1
           fi
           
-          # Try accessing workflows with session cookie
-          api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -b /tmp/n8n_cookies.txt \
-            http://localhost:5678/api/v1/workflows 2>/dev/null)
-          
-          api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          api_body=$(echo "$api_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-          
-          echo "Session API verification (/api/v1/workflows) response code: $api_http_code"
-          echo "Session API verification response: $api_body"
-          
-          if [ "$api_http_code" = "200" ]; then
-            echo "✅ Session-based API access verification successful"
-            return 0
-          fi
-          
-          # Try the legacy REST endpoint with session
-          api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -b /tmp/n8n_cookies.txt \
-            http://localhost:5678/rest/workflows 2>/dev/null)
-          
-          api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          api_body=$(echo "$api_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-          
-          echo "Legacy session API verification (/rest/workflows) response code: $api_http_code"
-          echo "Legacy session API verification response: $api_body"
-          
-          if [ "$api_http_code" = "200" ]; then
-            echo "✅ Legacy session-based API access verification successful"
-            return 0
-          fi
-          
-          echo "❌ Session-based API access verification failed on both endpoints"
           return 1
         }
         
-        # First, check if we can access the API directly (single-user mode)
-        echo "Checking if n8n API is directly accessible without authentication..."
+        # First, check if we can access the API directly
+        echo "Checking if n8n API is directly accessible..."
         
         direct_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
           http://localhost:5678/api/v1/workflows 2>/dev/null)
         
         direct_http_code=$(echo "$direct_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
         
+        echo "Direct API test returned: $direct_http_code"
+        
         if [ "$direct_http_code" = "200" ]; then
           echo "✅ n8n API is accessible without authentication"
-          echo "Workflows endpoint returned: $direct_http_code"
           exit 0
         fi
         
-        # Check if API key works without owner setup
-        echo "Testing API key authentication..."
-        
-        api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-          -H "X-N8N-API-KEY: test-api-key" \
-          http://localhost:5678/api/v1/workflows 2>/dev/null)
-        
-        api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-        
-        echo "Direct API test: $direct_http_code, API Key test: $api_key_http_code"
-        
-        if [ "$api_key_http_code" = "200" ]; then
-          echo "✅ API key authentication works without owner setup"
-          exit 0
-        fi
-        
-        echo "API requires owner setup. Proceeding with setup process..."
-        
-        # Main setup process with retries
-        max_setup_attempts=5
-        setup_attempt=0
-        
-        while [ $setup_attempt -lt $max_setup_attempts ]; do
-          setup_attempt=$((setup_attempt + 1))
-          echo "Setup attempt $setup_attempt/$max_setup_attempts..."
+        # Try owner setup
+        if setup_via_ui_endpoint; then
+          echo "Owner setup completed, testing authentication..."
+          sleep 2
           
-          if setup_n8n_owner; then
-            echo "Owner setup completed, waiting for services to stabilize..."
-            sleep 3
-            
-            # Verify API access works
-            if verify_api_access; then
-              echo "🎉 n8n setup and API verification completed successfully!"
-              exit 0
-            else
-              echo "⚠️  API verification failed, retrying setup..."
-            fi
-          else
-            echo "⚠️  Owner setup failed, retrying..."
+          if test_authentication; then
+            echo "🎉 n8n setup completed successfully!"
+            exit 0
           fi
-          
-          # Show recent logs for debugging
-          echo "🔍 Recent n8n logs for debugging:"
-          docker logs --tail 10 n8n
-          
-          sleep 3
-        done
+        fi
         
-        echo "❌ Failed to complete n8n setup after $max_setup_attempts attempts"
-        echo "This might be expected for n8n 1.1.0 in certain configurations"
-        echo "Attempting to run acceptance tests anyway..."
+        echo "❌ Failed to complete n8n setup"
+        echo "Attempting to run acceptance tests anyway to see what errors we get..."
         echo "Final n8n logs:"
-        docker logs n8n
+        docker logs --tail 20 n8n
     
     - name: Run acceptance tests
       env:
