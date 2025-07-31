@@ -277,8 +277,8 @@ jobs:
       run: |
         echo "Setting up n8n initial owner and API access..."
         
-        # Try a simplified approach - use the UI endpoint for setup
-        setup_via_ui_endpoint() {
+        # Try multiple setup endpoints for different n8n versions
+        setup_via_api_endpoints() {
           local setup_payload='{
             "email": "admin@example.com",
             "firstName": "Admin",
@@ -286,47 +286,47 @@ jobs:
             "password": "Admin123!"
           }'
           
-          echo "Attempting n8n owner setup via web UI setup endpoint..."
+          echo "Attempting n8n owner setup via various API endpoints..."
           
-          # Try the main web UI setup endpoint (commonly used in n8n 1.x)
-          setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/api/v1/owner/setup \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d "$setup_payload" 2>/dev/null)
+          # List of possible setup endpoints to try
+          local endpoints=(
+            "/api/v1/owner/setup"
+            "/api/v1/setup" 
+            "/rest/owner/setup"
+            "/rest/setup"
+            "/api/v1/owner"
+            "/rest/owner"
+            "/api/v1/users"
+          )
           
-          setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+          for endpoint in "${endpoints[@]}"; do
+            echo "Trying endpoint: $endpoint"
+            
+            setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X POST "http://localhost:5678$endpoint" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d "$setup_payload" 2>/dev/null)
+            
+            setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+            
+            echo "Endpoint $endpoint response code: $setup_http_code"
+            echo "Endpoint $endpoint response body: $setup_body"
+            
+            if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
+              echo "✅ n8n owner setup successful via $endpoint"
+              return 0
+            elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized\|already.*exists\|user.*already.*exists"; then
+              echo "ℹ️  n8n owner already exists (via $endpoint), continuing..."
+              return 0
+            elif [ "$setup_http_code" != "404" ] && [ "$setup_http_code" != "405" ]; then
+              echo "⚠️  Endpoint $endpoint returned $setup_http_code, might be usable"
+              # Continue trying other endpoints but note this one responded
+            fi
+          done
           
-          echo "UI Setup API (/api/v1/owner/setup) response code: $setup_http_code"
-          echo "UI Setup API response body: $setup_body"
-          
-          if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
-            echo "✅ n8n owner setup successful via UI API"
-            return 0
-          elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized\|already.*exists"; then
-            echo "ℹ️  n8n owner already exists, continuing..."
-            return 0
-          fi
-          
-          # Try /api/v1/setup endpoint  
-          setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/api/v1/setup \
-            -H "Content-Type: application/json" \
-            -d "$setup_payload" 2>/dev/null)
-          
-          setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-          
-          echo "General setup API (/api/v1/setup) response code: $setup_http_code"
-          echo "General setup API response body: $setup_body"
-          
-          if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
-            echo "✅ n8n owner setup successful via general setup API"
-            return 0
-          fi
-          
-          echo "⚠️  UI setup endpoints failed"
+          echo "⚠️  All setup endpoints failed or returned 404"
           return 1
         }
         
@@ -424,9 +424,68 @@ jobs:
           exit 0
         fi
         
+        # Try alternative approaches if API setup fails
+        try_alternative_setup() {
+          echo "Trying alternative setup approaches..."
+          
+          # Check if n8n has a different setup flow
+          echo "Checking n8n web interface for setup requirements..."
+          web_response=$(curl -s -w "HTTPSTATUS:%{http_code}" http://localhost:5678/ 2>/dev/null)
+          web_http_code=$(echo "$web_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          web_body=$(echo "$web_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+          
+          echo "Web interface response code: $web_http_code"
+          
+          if [ "$web_http_code" = "200" ]; then
+            # Check if web interface shows setup page
+            if echo "$web_body" | grep -q "setup\|Setup\|owner\|Owner"; then
+              echo "ℹ️  Web interface indicates setup is required"
+            fi
+            
+            # Try to create a user through web endpoints
+            echo "Attempting user creation via web endpoints..."
+            
+            # Try web-based setup endpoints
+            web_setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X POST http://localhost:5678/rest/owner/setup \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d '{
+                "email": "admin@example.com",
+                "firstName": "Admin", 
+                "lastName": "User",
+                "password": "Admin123!"
+              }' 2>/dev/null)
+            
+            web_setup_http_code=$(echo "$web_setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            web_setup_body=$(echo "$web_setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+            
+            echo "Web setup (/rest/owner/setup) response code: $web_setup_http_code"
+            echo "Web setup response body: $web_setup_body"
+            
+            if [ "$web_setup_http_code" = "200" ] || [ "$web_setup_http_code" = "201" ]; then
+              echo "✅ Web-based setup successful"
+              return 0
+            fi
+          fi
+          
+          return 1
+        }
+        
         # Try owner setup
-        if setup_via_ui_endpoint; then
+        if setup_via_api_endpoints; then
           echo "Owner setup completed, generating API key..."
+          sleep 2
+          
+          if generate_api_key; then
+            echo "🎉 n8n setup and authentication completed successfully!"
+            exit 0
+          fi
+        fi
+        
+        # Try alternative setup methods
+        if try_alternative_setup; then
+          echo "Alternative setup completed, generating API key..."
           sleep 2
           
           if generate_api_key; then

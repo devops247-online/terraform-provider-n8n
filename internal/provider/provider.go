@@ -126,7 +126,7 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	// Create n8n client with appropriate authentication method
 	var authMethod client.AuthMethod
-	
+
 	if useSessionAuth && cookieFile != "" {
 		// Use session-based authentication for CI environments
 		jar, err := cookiejar.New(nil)
