@@ -504,7 +504,8 @@ jobs:
       env:
         TF_ACC: 1
         N8N_BASE_URL: http://localhost:5678
-        N8N_API_KEY: test-api-key
+        N8N_EMAIL: admin@example.com
+        N8N_PASSWORD: Admin123!
       run: make testacc
     
     - name: Stop n8n
