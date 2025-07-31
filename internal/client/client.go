@@ -13,6 +13,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -95,14 +96,86 @@ func (a *SessionAuth) ApplyAuth(req *http.Request) error {
 	return nil
 }
 
+// validateCookieFilePath validates that the cookie file path is safe to open
+func validateCookieFilePath(cookieFile string) error {
+	if cookieFile == "" {
+		return fmt.Errorf("cookie file path cannot be empty")
+	}
+
+	// Clean the path to resolve any .. or . components
+	cleanPath := filepath.Clean(cookieFile)
+
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("cookie file path contains invalid path traversal: %s", cookieFile)
+	}
+
+	if err := validateAbsolutePath(cleanPath, cookieFile); err != nil {
+		return err
+	}
+
+	return validateFileExtension(cleanPath)
+}
+
+// validateAbsolutePath checks if absolute paths are in allowed directories
+func validateAbsolutePath(cleanPath, originalPath string) error {
+	if !filepath.IsAbs(cleanPath) {
+		return nil
+	}
+
+	allowedDirs := getAllowedDirectories()
+	for _, allowedDir := range allowedDirs {
+		if strings.HasPrefix(cleanPath, filepath.Clean(allowedDir)) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cookie file path outside allowed directories: %s", originalPath)
+}
+
+// getAllowedDirectories returns list of safe directories for cookie files
+func getAllowedDirectories() []string {
+	allowedDirs := []string{"/tmp", "/var/tmp", os.TempDir()}
+
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		allowedDirs = append(allowedDirs, homeDir)
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		allowedDirs = append(allowedDirs, cwd)
+	}
+
+	return allowedDirs
+}
+
+// validateFileExtension checks if the file extension is allowed
+func validateFileExtension(cleanPath string) error {
+	ext := filepath.Ext(cleanPath)
+	allowedExts := []string{".txt", ".cookies", ".cookie", ""}
+
+	for _, allowedExt := range allowedExts {
+		if ext == allowedExt {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cookie file has invalid extension: %s (allowed: .txt, .cookies, .cookie, or no extension)", ext)
+}
+
 // LoadCookiesFromFile loads cookies from a Netscape format cookie file
 func LoadCookiesFromFile(cookieFile string, targetURL *url.URL) (http.CookieJar, error) {
+	// Validate the cookie file path for security
+	if err := validateCookieFilePath(cookieFile); err != nil {
+		return nil, fmt.Errorf("invalid cookie file path: %w", err)
+	}
+
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
 	}
 
-	file, err := os.Open(cookieFile)
+	// Use the cleaned path
+	cleanPath := filepath.Clean(cookieFile)
+	file, err := os.Open(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open cookie file: %w", err)
 	}

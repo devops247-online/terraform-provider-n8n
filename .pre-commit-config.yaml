@@ -1,0 +1,100 @@
+# Pre-commit hooks for terraform-provider-n8n
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        exclude: '\.md$'
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: detect-private-key
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Go-specific hooks
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      # Format Go code
+      - id: go-fmt
+        args: [-s]
+
+      # Run go vet
+      - id: go-vet
+
+      # Run go mod tidy
+      - id: go-mod-tidy
+
+      # Check for Go imports
+      - id: go-imports
+        args: [-local, github.com/devops247-online/terraform-provider-n8n]
+
+      # Unit tests (fast)
+      - id: go-unit-tests
+        args: [-short]
+
+  # Advanced Go linting with golangci-lint
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.62.2
+    hooks:
+      - id: golangci-lint
+        args: [--config=.golangci.yml]
+
+  # Security scanning with gosec (run manually with 'make gosec')
+  # - repo: local
+  #   hooks:
+  #     - id: gosec
+  #       name: gosec
+  #       description: Security audit of Go code using gosec
+  #       entry: gosec
+  #       language: system
+  #       types: [go]
+  #       args: ['-severity', 'medium', '-confidence', 'medium', '-exclude-generated', './...']
+
+  # Terraform formatting and validation
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.94.3
+    hooks:
+      - id: terraform_fmt
+        files: \.tf$
+      - id: terraform_validate
+        files: \.tf$
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        files: Dockerfile
+
+
+# Configuration
+default_language_version:
+  python: python3
+
+minimum_pre_commit_version: '3.0.0'
+
+# Global exclude patterns
+exclude: |
+  (?x)^(
+    \.git/|
+    \.terraform/|
+    terraform\.tfstate.*|
+    \.terraform\.lock\.hcl|
+    vendor/|
+    .*\.pb\.go$|
+    .*_generated\.go$
+  )$

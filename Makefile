@@ -19,7 +19,7 @@ NAMESPACE=devops247-online
 NAME=n8n
 OS_ARCH=linux_amd64
 
-.PHONY: all build clean test install uninstall fmt vet lint docs testacc
+.PHONY: all build clean test install uninstall fmt vet lint docs testacc pre-commit-install pre-commit-run
 
 all: build
 
@@ -107,6 +107,13 @@ local-install: build
 	mkdir -p ~/.terraform.d/plugins/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)/
 	cp $(BINARY_NAME) ~/.terraform.d/plugins/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)/$(BINARY_NAME)_v$(VERSION)
 
+# Pre-commit hooks
+pre-commit-install:
+	./scripts/install-pre-commit-hooks.sh
+
+pre-commit-run:
+	pre-commit run --all-files
+
 # Help
 help:
 	@echo "Available commands:"
@@ -129,3 +136,5 @@ help:
 	@echo "  dev-setup    - Set up development environment"
 	@echo "  pre-release  - Run all checks before release"
 	@echo "  local-install- Install provider for local testing"
+	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  pre-commit-run - Run pre-commit on all files"
