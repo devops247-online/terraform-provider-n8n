@@ -360,43 +360,75 @@ jobs:
           return 1
         }
         
-        # Function to verify API access
+        # Function to verify API access using session-based authentication
         verify_api_access() {
-          echo "Verifying API access with API key..."
+          echo "Verifying API access using session authentication..."
           
-          # Try the new API endpoint first
+          # First, log in to get session cookie
+          login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -X POST http://localhost:5678/rest/login \
+            -H "Content-Type: application/json" \
+            -c /tmp/n8n_cookies.txt \
+            -d '{"email": "admin@example.com", "password": "Admin123!"}' 2>/dev/null)
+          
+          login_http_code=$(echo "$login_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          login_body=$(echo "$login_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+          
+          echo "Login response code: $login_http_code"
+          echo "Login response: $login_body"
+          
+          if [ "$login_http_code" != "200" ]; then
+            echo "⚠️  Login failed, trying API key fallback..."
+            
+            # Fallback to API key authentication
+            api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -H "X-N8N-API-KEY: test-api-key" \
+              http://localhost:5678/api/v1/workflows 2>/dev/null)
+            
+            api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            
+            if [ "$api_http_code" = "200" ]; then
+              echo "✅ API key authentication successful"
+              return 0
+            fi
+            
+            echo "❌ Both session and API key authentication failed"
+            return 1
+          fi
+          
+          # Try accessing workflows with session cookie
           api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "X-N8N-API-KEY: test-api-key" \
+            -b /tmp/n8n_cookies.txt \
             http://localhost:5678/api/v1/workflows 2>/dev/null)
           
           api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
           api_body=$(echo "$api_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
           
-          echo "API verification (/api/v1/workflows) response code: $api_http_code"
-          echo "API verification response: $api_body"
+          echo "Session API verification (/api/v1/workflows) response code: $api_http_code"
+          echo "Session API verification response: $api_body"
           
           if [ "$api_http_code" = "200" ]; then
-            echo "✅ API access verification successful"
+            echo "✅ Session-based API access verification successful"
             return 0
           fi
           
-          # Try the legacy REST endpoint
+          # Try the legacy REST endpoint with session
           api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -H "X-N8N-API-KEY: test-api-key" \
+            -b /tmp/n8n_cookies.txt \
             http://localhost:5678/rest/workflows 2>/dev/null)
           
           api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
           api_body=$(echo "$api_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
           
-          echo "Legacy API verification (/rest/workflows) response code: $api_http_code"
-          echo "Legacy API verification response: $api_body"
+          echo "Legacy session API verification (/rest/workflows) response code: $api_http_code"
+          echo "Legacy session API verification response: $api_body"
           
           if [ "$api_http_code" = "200" ]; then
-            echo "✅ Legacy API access verification successful"
+            echo "✅ Legacy session-based API access verification successful"
             return 0
           fi
           
-          echo "❌ API access verification failed on both endpoints"
+          echo "❌ Session-based API access verification failed on both endpoints"
           return 1
         }
         
