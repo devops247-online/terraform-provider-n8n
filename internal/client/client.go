@@ -50,6 +50,7 @@ type Config struct {
 	Timeout            time.Duration
 	Logger             Logger
 	RetryConfig        RetryConfig
+	CookieFile         string // Path to cookie file for session authentication
 }
 
 // AuthMethod interface for different authentication methods
@@ -75,6 +76,17 @@ type BasicAuth struct {
 
 func (a *BasicAuth) ApplyAuth(req *http.Request) error {
 	req.SetBasicAuth(a.Email, a.Password)
+	return nil
+}
+
+// SessionAuth implements session-based authentication using cookies
+type SessionAuth struct {
+	CookieJar *http.CookieJar
+}
+
+func (a *SessionAuth) ApplyAuth(req *http.Request) error {
+	// Session authentication is handled via cookies in the HTTP client
+	// No additional headers needed as cookies are automatically sent
 	return nil
 }
 

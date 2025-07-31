@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -119,7 +121,29 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		)
 	}
 
-	if apiKey == "" && (email == "" || password == "") {
+	// Check for session-based authentication from CI environment
+	useSessionAuth := os.Getenv("N8N_USE_SESSION_AUTH") == "true"
+	cookieFile := os.Getenv("N8N_COOKIE_FILE")
+
+	// Create n8n client with appropriate authentication method
+	var authMethod client.AuthMethod
+	
+	if useSessionAuth && cookieFile != "" {
+		// Use session-based authentication for CI environments
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to Create Cookie Jar",
+				"Failed to create cookie jar for session authentication: "+err.Error(),
+			)
+			return
+		}
+		authMethod = &client.SessionAuth{CookieJar: &jar}
+	} else if apiKey != "" {
+		authMethod = &client.APIKeyAuth{APIKey: apiKey}
+	} else if email != "" && password != "" {
+		authMethod = &client.BasicAuth{Email: email, Password: password}
+	} else {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Missing n8n Authentication",
@@ -127,18 +151,7 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 				"Either set the api_key attribute in the provider configuration or use the N8N_API_KEY environment variable, "+
 				"or provide both email and password for basic authentication via the N8N_EMAIL and N8N_PASSWORD environment variables.",
 		)
-	}
-
-	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Create n8n client
-	var authMethod client.AuthMethod
-	if apiKey != "" {
-		authMethod = &client.APIKeyAuth{APIKey: apiKey}
-	} else {
-		authMethod = &client.BasicAuth{Email: email, Password: password}
 	}
 
 	clientConfig := &client.Config{

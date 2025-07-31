@@ -330,9 +330,9 @@ jobs:
           return 1
         }
         
-        # Test authentication with login
-        test_authentication() {
-          echo "Testing authentication with login..."
+        # Generate and capture API key
+        generate_api_key() {
+          echo "Generating API key for authentication..."
           
           # First, log in to get session cookie
           login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
@@ -357,9 +357,38 @@ jobs:
           echo "Login response code: $login_http_code"
           
           if [ "$login_http_code" = "200" ]; then
-            echo "✅ Login successful, testing API access..."
+            echo "✅ Login successful, generating API key..."
             
-            # Try accessing workflows with session cookie
+            # Generate API key
+            api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+              -X POST http://localhost:5678/api/v1/me/api-key \
+              -b /tmp/n8n_cookies.txt \
+              -H "Content-Type: application/json" \
+              -d '{"name": "terraform-provider"}' 2>/dev/null)
+            
+            api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+            api_key_body=$(echo "$api_key_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+            
+            echo "API key generation response code: $api_key_http_code"
+            echo "API key generation response body: $api_key_body"
+            
+            if [ "$api_key_http_code" = "200" ] || [ "$api_key_http_code" = "201" ]; then
+              # Extract API key from response (try different possible JSON structures)
+              api_key=$(echo "$api_key_body" | jq -r '.apiKey // .key // .token // empty' 2>/dev/null)
+              
+              if [ -n "$api_key" ] && [ "$api_key" != "null" ]; then
+                echo "✅ API key generated successfully: ${api_key:0:8}..."
+                echo "N8N_API_KEY=$api_key" >> $GITHUB_ENV
+                echo "N8N_USE_SESSION_AUTH=false" >> $GITHUB_ENV
+                return 0
+              else
+                echo "⚠️  Could not extract API key from response, trying session auth..."
+              fi
+            else
+              echo "⚠️  API key generation failed with code $api_key_http_code, trying session auth..."
+            fi
+            
+            # Test session-based authentication as fallback
             api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
               -b /tmp/n8n_cookies.txt \
               http://localhost:5678/api/v1/workflows 2>/dev/null)
@@ -367,25 +396,11 @@ jobs:
             api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
             
             if [ "$api_http_code" = "200" ]; then
-              echo "✅ Session-based API access works"
-              
-              # Try to generate an API key
-              api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-                -X POST http://localhost:5678/api/v1/me/api-key \
-                -b /tmp/n8n_cookies.txt \
-                -H "Content-Type: application/json" \
-                -d '{"name": "terraform-provider"}' 2>/dev/null)
-              
-              api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-              api_key_body=$(echo "$api_key_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-              
-              echo "API key generation response code: $api_key_http_code"
-              
-              if [ "$api_key_http_code" = "200" ] || [ "$api_key_http_code" = "201" ]; then
-                echo "✅ API key generated successfully"
-                echo "$api_key_body"
-              fi
-              
+              echo "✅ Session-based API access works, using cookie authentication"
+              echo "N8N_USE_SESSION_AUTH=true" >> $GITHUB_ENV
+              echo "N8N_COOKIE_FILE=/tmp/n8n_cookies.txt" >> $GITHUB_ENV
+              # Copy cookies to a location accessible to tests
+              cp /tmp/n8n_cookies.txt /tmp/n8n_session_cookies.txt
               return 0
             fi
           fi
@@ -405,31 +420,41 @@ jobs:
         
         if [ "$direct_http_code" = "200" ]; then
           echo "✅ n8n API is accessible without authentication"
+          echo "N8N_USE_SESSION_AUTH=false" >> $GITHUB_ENV
           exit 0
         fi
         
         # Try owner setup
         if setup_via_ui_endpoint; then
-          echo "Owner setup completed, testing authentication..."
+          echo "Owner setup completed, generating API key..."
           sleep 2
           
-          if test_authentication; then
-            echo "🎉 n8n setup completed successfully!"
+          if generate_api_key; then
+            echo "🎉 n8n setup and authentication completed successfully!"
             exit 0
           fi
         fi
         
-        echo "❌ Failed to complete n8n setup"
-        echo "Attempting to run acceptance tests anyway to see what errors we get..."
+        echo "❌ Failed to complete n8n setup and authentication"
         echo "Final n8n logs:"
-        docker logs --tail 20 n8n
+        docker logs --tail 30 n8n
+        exit 1
     
     - name: Run acceptance tests
       env:
         TF_ACC: 1
         N8N_BASE_URL: http://localhost:5678
-        N8N_API_KEY: test-api-key
-      run: make testacc
+        # N8N_API_KEY is set dynamically by the setup step
+        # N8N_USE_SESSION_AUTH is set by the setup step if API key fails
+      run: |
+        echo "Starting acceptance tests with authentication method: ${N8N_USE_SESSION_AUTH:-API_KEY}"
+        if [ "${N8N_USE_SESSION_AUTH:-false}" = "true" ]; then
+          echo "Using session-based authentication"
+          export N8N_COOKIE_FILE="/tmp/n8n_session_cookies.txt"
+        else
+          echo "Using API key authentication: ${N8N_API_KEY:0:8}..."
+        fi
+        make testacc
     
     - name: Stop n8n
       if: always()
