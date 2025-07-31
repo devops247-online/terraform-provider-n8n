@@ -207,21 +207,16 @@ func TestClient_EmptyResponse(t *testing.T) {
 }
 
 func TestClient_LargeResponse(t *testing.T) {
-	// Create a large JSON response
-	largeData := make([]map[string]string, 1000)
-	for i := 0; i < 1000; i++ {
-		largeData[i] = map[string]string{
-			"id":   fmt.Sprintf("item-%d", i),
-			"name": fmt.Sprintf("Item %d with some long description", i),
-		}
-	}
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		// Write a large response
-		response := fmt.Sprintf(`{"data": %s}`, strings.Repeat(`{"id": "test", "name": "test"}`, 10000))
+		// Write a large but valid JSON response
+		var items []string
+		for i := 0; i < 1000; i++ {
+			items = append(items, fmt.Sprintf(`{"id": "item-%d", "name": "Item %d"}`, i, i))
+		}
+		response := fmt.Sprintf(`{"data": [%s]}`, strings.Join(items, ","))
 		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
