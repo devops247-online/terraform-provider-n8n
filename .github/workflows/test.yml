@@ -191,13 +191,17 @@ jobs:
           -e N8N_API_KEY=test-api-key \
           -e N8N_METRICS=true \
           -e N8N_LOG_LEVEL=debug \
-          -e N8N_USER_MANAGEMENT_DISABLED=true \
+          -e N8N_USER_MANAGEMENT_DISABLED=false \
           -e N8N_PUBLIC_API_DISABLED=false \
           -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false \
           -e QUEUE_HEALTH_CHECK_ACTIVE=true \
           -e EXECUTIONS_DATA_SAVE_ON_SUCCESS=none \
           -e EXECUTIONS_DATA_SAVE_ON_ERROR=none \
           -e EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=false \
+          -e N8N_ONBOARDING_FLOW_DISABLED=true \
+          -e N8N_DISABLE_UI=false \
+          -e N8N_HOST=0.0.0.0 \
+          -e N8N_PORT=5678 \
           -e NODE_ENV=production \
           n8nio/n8n:${{ matrix.n8n-version }}
         
@@ -284,10 +288,19 @@ jobs:
           
           echo "Attempting n8n owner setup via REST API..."
           
-          # Try setup API endpoint (/rest/owner/setup for newer versions)
+          # First, try to check if n8n is already set up
+          status_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            http://localhost:5678/rest/login 2>/dev/null)
+          
+          status_http_code=$(echo "$status_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          
+          echo "Login endpoint status: $status_http_code"
+          
+          # Try the owner setup endpoint with proper payload structure
           setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
             -X POST http://localhost:5678/rest/owner/setup \
             -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
             -d "$setup_payload" 2>/dev/null)
           
           setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
@@ -299,7 +312,7 @@ jobs:
           if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
             echo "✅ n8n owner setup successful via REST API"
             return 0
-          elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized"; then
+          elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized\|already.*exists"; then
             echo "ℹ️  n8n owner already exists, continuing..."
             return 0
           fi
@@ -387,20 +400,36 @@ jobs:
           return 1
         }
         
-        # For n8n 1.1.0, we might need to use environment-based setup instead of API
-        echo "Checking if n8n is running in single-user mode (skips owner setup)..."
+        # First, check if we can access the API directly (single-user mode)
+        echo "Checking if n8n API is directly accessible without authentication..."
         
-        # Check if we can access workflows directly (indicating single-user mode)
         direct_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
           http://localhost:5678/api/v1/workflows 2>/dev/null)
         
         direct_http_code=$(echo "$direct_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
         
         if [ "$direct_http_code" = "200" ]; then
-          echo "✅ n8n is running in single-user mode - no owner setup required"
-          echo "API is accessible without authentication"
+          echo "✅ n8n API is accessible without authentication"
+          echo "Workflows endpoint returned: $direct_http_code"
           exit 0
         fi
+        
+        # Check if API key works without owner setup
+        echo "Testing API key authentication..."
+        
+        api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+          -H "X-N8N-API-KEY: test-api-key" \
+          http://localhost:5678/api/v1/workflows 2>/dev/null)
+        
+        api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+        
+        if [ "$api_key_http_code" = "200" ]; then
+          echo "✅ API key authentication works without owner setup"
+          echo "API key test returned: $api_key_http_code"
+          exit 0
+        fi
+        
+        echo "API requires owner setup. Direct API: $direct_http_code, API Key: $api_key_http_code"
         
         # Main setup process with retries
         max_setup_attempts=5
