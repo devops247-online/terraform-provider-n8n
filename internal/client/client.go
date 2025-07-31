@@ -81,7 +81,7 @@ func (a *BasicAuth) ApplyAuth(req *http.Request) error {
 
 // SessionAuth implements session-based authentication using cookies
 type SessionAuth struct {
-	CookieJar *http.CookieJar
+	CookieJar http.CookieJar
 }
 
 func (a *SessionAuth) ApplyAuth(req *http.Request) error {

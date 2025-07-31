@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"net/http"
 	"net/http/cookiejar"
 	"os"
 
@@ -138,7 +137,7 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 			)
 			return
 		}
-		authMethod = &client.SessionAuth{CookieJar: &jar}
+		authMethod = &client.SessionAuth{CookieJar: jar}
 	} else if apiKey != "" {
 		authMethod = &client.APIKeyAuth{APIKey: apiKey}
 	} else if email != "" && password != "" {
