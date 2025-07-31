@@ -22,7 +22,6 @@ Manages an n8n user. This resource allows you to create, read, update, and delet
 ### Optional
 
 - `first_name` (String) User's first name
-- `is_pending` (Boolean) Whether the user invitation is pending
 - `last_name` (String) User's last name
 - `password` (String, Sensitive) User password. This is sensitive data and will not be stored in the state after creation.
 - `role` (String) User role (e.g., 'admin', 'member', 'editor'). If not specified, defaults to the instance default role.
@@ -33,6 +32,7 @@ Manages an n8n user. This resource allows you to create, read, update, and delet
 - `created_at` (String) Timestamp when the user was created
 - `id` (String) User identifier
 - `is_owner` (Boolean) Whether the user is an owner of the n8n instance
+- `is_pending` (Boolean) Whether the user invitation is pending
 - `updated_at` (String) Timestamp when the user was last updated
 
 <a id="nestedatt--settings"></a>

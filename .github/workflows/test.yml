@@ -33,10 +33,10 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-test-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}-v2
         restore-keys: |
-          ${{ runner.os }}-go-${{ matrix.go-version }}-
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-test-${{ matrix.go-version }}-
+          ${{ runner.os }}-go-test-
     
     - name: Download dependencies
       run: go mod download
@@ -78,10 +78,10 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-quality-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-v2
         restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-quality-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-quality-
     
     - name: Download dependencies
       run: go mod download
@@ -156,10 +156,10 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-acceptance-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-v2
         restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-acceptance-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-acceptance-
     
     - name: Download dependencies
       run: go mod download
@@ -168,7 +168,7 @@ jobs:
       run: |
         echo "Waiting for PostgreSQL to be ready..."
         timeout 60s bash -c '
-          until docker exec -i $(docker ps -qf "ancestor=postgres:13") pg_isready -U n8n -d n8n; do
+          until pg_isready -h localhost -p 5432 -U n8n -d n8n; do
             echo "PostgreSQL not ready yet, waiting..."
             sleep 2
           done
@@ -181,8 +181,9 @@ jobs:
         docker run -d \
           --name n8n \
           -p 5678:5678 \
+          --network host \
           -e DB_TYPE=postgresdb \
-          -e DB_POSTGRESDB_HOST=postgres \
+          -e DB_POSTGRESDB_HOST=localhost \
           -e DB_POSTGRESDB_PORT=5432 \
           -e DB_POSTGRESDB_DATABASE=n8n \
           -e DB_POSTGRESDB_USER=n8n \
@@ -193,49 +194,64 @@ jobs:
           -e EXECUTIONS_DATA_SAVE_ON_SUCCESS=none \
           -e EXECUTIONS_DATA_SAVE_ON_ERROR=none \
           -e EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=false \
-          --link postgres:postgres \
+          -e N8N_LOG_LEVEL=debug \
           n8nio/n8n:${{ matrix.n8n-version }}
         
         echo "n8n container started, checking status..."
         docker ps -a
         echo "Checking n8n logs for any startup issues..."
-        sleep 3
+        sleep 5
         docker logs n8n
     
     - name: Wait for n8n to be ready
       run: |
         echo "Waiting for n8n to start up..."
-        timeout 180s bash -c '
+        timeout 300s bash -c '
           attempt=0
-          max_attempts=60
+          max_attempts=100
           while [ $attempt -lt $max_attempts ]; do
             attempt=$((attempt + 1))
             echo "Health check attempt $attempt/$max_attempts..."
             
+            # Check if container is still running
+            if ! docker ps --format "table {{.Names}}" | grep -q "^n8n$"; then
+              echo "❌ n8n container is not running!"
+              docker ps -a
+              echo "Container logs:"
+              docker logs n8n
+              exit 1
+            fi
+            
             # Try primary health check endpoint
-            if curl -f http://localhost:5678/healthz 2>/dev/null; then
+            if curl -f -s http://localhost:5678/healthz >/dev/null 2>&1; then
               echo "✅ n8n health check passed!"
               exit 0
             fi
             
             # Try alternative health check endpoint
-            if curl -f http://localhost:5678/healthz/readiness 2>/dev/null; then
+            if curl -f -s http://localhost:5678/healthz/readiness >/dev/null 2>&1; then
               echo "✅ n8n readiness check passed!"
               exit 0
             fi
             
             # Try basic HTTP check (for older versions without health endpoints)
-            if curl -f http://localhost:5678/ 2>/dev/null; then
+            if curl -f -s http://localhost:5678/ >/dev/null 2>&1; then
               echo "✅ n8n HTTP check passed!"
               exit 0
             fi
             
-            # Show container status if health checks fail
-            if [ $((attempt % 10)) -eq 0 ]; then
+            # Try API endpoint check
+            if curl -f -s -H "X-N8N-API-KEY: test-api-key" http://localhost:5678/api/v1/workflows >/dev/null 2>&1; then
+              echo "✅ n8n API check passed!"
+              exit 0
+            fi
+            
+            # Show container status and logs more frequently for debugging
+            if [ $((attempt % 5)) -eq 0 ]; then
               echo "🔍 Container status after $attempt attempts:"
               docker ps -a
               echo "🔍 Recent n8n logs:"
-              docker logs --tail 10 n8n
+              docker logs --tail 20 n8n
             fi
             
             sleep 3
@@ -280,10 +296,10 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-docs-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-v2
         restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-docs-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-docs-
     
     - name: Download dependencies
       run: go mod download
@@ -335,10 +351,10 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-build-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}-v2
         restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
-          ${{ runner.os }}-go-
+          ${{ runner.os }}-go-build-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-build-
     
     - name: Download dependencies
       run: go mod download

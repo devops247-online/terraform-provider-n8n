@@ -181,14 +181,14 @@ func TestClient_CreateWorkflow(t *testing.T) {
 	inputWorkflow := &Workflow{
 		Name:   "New Workflow",
 		Active: false,
-		Nodes:  map[string]interface{}{"node1": map[string]interface{}{"type": "trigger"}},
+		Nodes:  []interface{}{map[string]interface{}{"id": "node1", "type": "trigger"}},
 	}
 
 	mockResponse := Workflow{
 		ID:     "new-id",
 		Name:   "New Workflow",
 		Active: false,
-		Nodes:  map[string]interface{}{"node1": map[string]interface{}{"type": "trigger"}},
+		Nodes:  []interface{}{map[string]interface{}{"id": "node1", "type": "trigger"}},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

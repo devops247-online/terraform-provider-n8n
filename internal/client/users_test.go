@@ -182,12 +182,25 @@ func TestClient_CreateUser(t *testing.T) {
 		Password:  "password123",
 	}
 
-	expectedResult := &User{
+	expectedUser := User{
 		ID:        "new-id",
 		Email:     "newuser@example.com",
 		FirstName: "New",
 		LastName:  "User",
 		Role:      "member",
+	}
+
+	// n8n API returns array of {user: User, error: string} objects
+	type CreateUserResponse struct {
+		User  User   `json:"user"`
+		Error string `json:"error"`
+	}
+
+	expectedResult := []CreateUserResponse{
+		{
+			User:  expectedUser,
+			Error: "",
+		},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -199,11 +212,15 @@ func TestClient_CreateUser(t *testing.T) {
 			t.Errorf("Expected path /api/v1/users, got %s", r.URL.Path)
 		}
 
-		var receivedUserReq CreateUserRequest
-		_ = json.NewDecoder(r.Body).Decode(&receivedUserReq)
+		var receivedUserReqArray []*CreateUserRequest
+		_ = json.NewDecoder(r.Body).Decode(&receivedUserReqArray)
 
-		if receivedUserReq.Email != "newuser@example.com" {
-			t.Errorf("Expected user email 'newuser@example.com', got %s", receivedUserReq.Email)
+		if len(receivedUserReqArray) == 0 {
+			t.Errorf("Expected array of users, got empty array")
+		}
+
+		if len(receivedUserReqArray) > 0 && receivedUserReqArray[0].Email != "newuser@example.com" {
+			t.Errorf("Expected user email 'newuser@example.com', got %s", receivedUserReqArray[0].Email)
 		}
 
 		w.Header().Set("Content-Type", "application/json")

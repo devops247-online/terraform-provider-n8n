@@ -570,7 +570,7 @@ func (r *WorkflowResource) updateModelFromWorkflow(model *WorkflowResourceModel,
 // convertNodesToArray converts nodes from Terraform's object format to n8n API's array format
 func (r *WorkflowResource) convertNodesToArray(nodes map[string]interface{}) []interface{} {
 	var nodesArray []interface{}
-	
+
 	for nodeId, nodeData := range nodes {
 		if nodeMap, ok := nodeData.(map[string]interface{}); ok {
 			// Add the node ID to the node data
@@ -578,14 +578,14 @@ func (r *WorkflowResource) convertNodesToArray(nodes map[string]interface{}) []i
 			nodesArray = append(nodesArray, nodeMap)
 		}
 	}
-	
+
 	return nodesArray
 }
 
-// convertNodesFromArray converts nodes from n8n API's array format to Terraform's object format  
+// convertNodesFromArray converts nodes from n8n API's array format to Terraform's object format
 func (r *WorkflowResource) convertNodesFromArray(nodesArray []interface{}) map[string]interface{} {
 	nodesObject := make(map[string]interface{})
-	
+
 	for _, nodeData := range nodesArray {
 		if nodeMap, ok := nodeData.(map[string]interface{}); ok {
 			if nodeId, exists := nodeMap["id"]; exists {
@@ -602,6 +602,6 @@ func (r *WorkflowResource) convertNodesFromArray(nodesArray []interface{}) map[s
 			}
 		}
 	}
-	
+
 	return nodesObject
 }
