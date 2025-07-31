@@ -288,11 +288,11 @@ jobs:
           
           echo "Attempting n8n owner setup via various API endpoints..."
           
-          # List of possible setup endpoints to try
+          # List of possible setup endpoints to try (prioritize known working ones)
           local endpoints=(
+            "/rest/owner/setup"
             "/api/v1/owner/setup"
             "/api/v1/setup" 
-            "/rest/owner/setup"
             "/rest/setup"
             "/api/v1/owner"
             "/rest/owner"
@@ -334,43 +334,76 @@ jobs:
         generate_api_key() {
           echo "Generating API key for authentication..."
           
-          # First, log in to get session cookie
-          login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-            -X POST http://localhost:5678/api/v1/auth/login \
-            -H "Content-Type: application/json" \
-            -c /tmp/n8n_cookies.txt \
-            -d '{"email": "admin@example.com", "password": "Admin123!"}' 2>/dev/null)
+          # Try multiple login endpoints
+          local login_endpoints=(
+            "/api/v1/auth/login"
+            "/api/v1/login"
+            "/rest/login"
+            "/rest/auth/login"
+          )
           
-          login_http_code=$(echo "$login_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          
-          if [ "$login_http_code" != "200" ]; then
-            # Try alternative login endpoint
+          login_http_code="404"
+          for login_endpoint in "${login_endpoints[@]}"; do
+            echo "Trying login endpoint: $login_endpoint"
+            
             login_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-              -X POST http://localhost:5678/api/v1/login \
+              -X POST "http://localhost:5678$login_endpoint" \
               -H "Content-Type: application/json" \
               -c /tmp/n8n_cookies.txt \
               -d '{"email": "admin@example.com", "password": "Admin123!"}' 2>/dev/null)
             
             login_http_code=$(echo "$login_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-          fi
+            login_body=$(echo "$login_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+            
+            echo "Login endpoint $login_endpoint response code: $login_http_code"
+            echo "Login endpoint $login_endpoint response body: $login_body"
+            
+            if [ "$login_http_code" = "200" ]; then
+              echo "✅ Login successful via $login_endpoint"
+              break
+            elif [ "$login_http_code" != "404" ] && [ "$login_http_code" != "405" ]; then
+              echo "⚠️  Login endpoint $login_endpoint returned $login_http_code, might need different payload"
+            fi
+          done
           
           echo "Login response code: $login_http_code"
           
           if [ "$login_http_code" = "200" ]; then
             echo "✅ Login successful, generating API key..."
             
-            # Generate API key
-            api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
-              -X POST http://localhost:5678/api/v1/me/api-key \
-              -b /tmp/n8n_cookies.txt \
-              -H "Content-Type: application/json" \
-              -d '{"name": "terraform-provider"}' 2>/dev/null)
+            # Try multiple API key generation endpoints
+            local api_key_endpoints=(
+              "/api/v1/me/api-key"
+              "/api/v1/me/api-keys"
+              "/rest/me/api-key"
+              "/rest/me/api-keys"
+              "/api/v1/auth/api-key"
+              "/rest/auth/api-key"
+            )
             
-            api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-            api_key_body=$(echo "$api_key_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-            
-            echo "API key generation response code: $api_key_http_code"
-            echo "API key generation response body: $api_key_body"
+            api_key_http_code="404"
+            for api_endpoint in "${api_key_endpoints[@]}"; do
+              echo "Trying API key endpoint: $api_endpoint"
+              
+              api_key_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+                -X POST "http://localhost:5678$api_endpoint" \
+                -b /tmp/n8n_cookies.txt \
+                -H "Content-Type: application/json" \
+                -d '{"name": "terraform-provider"}' 2>/dev/null)
+              
+              api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+              api_key_body=$(echo "$api_key_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+              
+              echo "API key endpoint $api_endpoint response code: $api_key_http_code"
+              echo "API key endpoint $api_endpoint response body: $api_key_body"
+              
+              if [ "$api_key_http_code" = "200" ] || [ "$api_key_http_code" = "201" ]; then
+                echo "✅ API key generation successful via $api_endpoint"
+                break
+              elif [ "$api_key_http_code" != "404" ] && [ "$api_key_http_code" != "405" ]; then
+                echo "⚠️  API key endpoint $api_endpoint returned $api_key_http_code, might need different payload"
+              fi
+            done
             
             if [ "$api_key_http_code" = "200" ] || [ "$api_key_http_code" = "201" ]; then
               # Extract API key from response (try different possible JSON structures)
