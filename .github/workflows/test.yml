@@ -283,7 +283,7 @@ jobs:
             "email": "admin@example.com",
             "firstName": "Admin",
             "lastName": "User",
-            "password": "admin123"
+            "password": "Admin123!"
           }'
           
           echo "Attempting n8n owner setup via REST API..."
@@ -423,13 +423,14 @@ jobs:
         
         api_key_http_code=$(echo "$api_key_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
         
+        echo "Direct API test: $direct_http_code, API Key test: $api_key_http_code"
+        
         if [ "$api_key_http_code" = "200" ]; then
           echo "✅ API key authentication works without owner setup"
-          echo "API key test returned: $api_key_http_code"
           exit 0
         fi
         
-        echo "API requires owner setup. Direct API: $direct_http_code, API Key: $api_key_http_code"
+        echo "API requires owner setup. Proceeding with setup process..."
         
         # Main setup process with retries
         max_setup_attempts=5
