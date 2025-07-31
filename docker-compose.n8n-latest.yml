@@ -8,17 +8,17 @@ services:
       POSTGRES_USER: n8n
       POSTGRES_PASSWORD: n8n
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_latest:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U n8n"]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   n8n:
-    image: n8nio/n8n:${N8N_VERSION:-latest}
+    image: n8nio/n8n:latest
     environment:
       # Database
       DB_TYPE: postgresdb
@@ -28,7 +28,7 @@ services:
       DB_POSTGRESDB_USER: n8n
       DB_POSTGRESDB_PASSWORD: n8n
       
-      # n8n Configuration for Testing
+      # n8n latest configuration
       N8N_USER_MANAGEMENT_DISABLED: false
       N8N_PUBLIC_API_DISABLED: false
       N8N_METRICS: true
@@ -53,19 +53,19 @@ services:
       GENERIC_TIMEZONE: UTC
       
     ports:
-      - "5678:5678"
+      - "5679:5678"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5678/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:5678/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     volumes:
-      - n8n_data:/home/node/.n8n
+      - n8n_data_latest:/home/node/.n8n
 
 volumes:
-  postgres_data:
-  n8n_data:
+  postgres_data_latest:
+  n8n_data_latest:

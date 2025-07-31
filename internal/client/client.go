@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -9,7 +10,10 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -81,13 +85,89 @@ func (a *BasicAuth) ApplyAuth(req *http.Request) error {
 
 // SessionAuth implements session-based authentication using cookies
 type SessionAuth struct {
-	CookieJar http.CookieJar
+	CookieJar  http.CookieJar
+	CookieFile string
 }
 
 func (a *SessionAuth) ApplyAuth(req *http.Request) error {
 	// Session authentication is handled via cookies in the HTTP client
 	// No additional headers needed as cookies are automatically sent
 	return nil
+}
+
+// LoadCookiesFromFile loads cookies from a Netscape format cookie file
+func LoadCookiesFromFile(cookieFile string, targetURL *url.URL) (http.CookieJar, error) {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
+	}
+
+	file, err := os.Open(cookieFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open cookie file: %w", err)
+	}
+	defer file.Close()
+
+	var cookies []*http.Cookie
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip comments and empty lines
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse Netscape cookie format: domain \t flag \t path \t secure \t expiration \t name \t value
+		parts := strings.Split(line, "\t")
+		if len(parts) < 7 {
+			continue
+		}
+
+		domain := parts[0]
+		path := parts[2]
+		secure := parts[3] == "TRUE"
+		expiration := parts[4]
+		name := parts[5]
+		value := parts[6]
+
+		// Convert expiration timestamp
+		var expires time.Time
+		if expiration != "0" {
+			if timestamp, err := strconv.ParseInt(expiration, 10, 64); err == nil {
+				expires = time.Unix(timestamp, 0)
+			}
+		}
+
+		// Skip expired cookies
+		if !expires.IsZero() && expires.Before(time.Now()) {
+			continue
+		}
+
+		cookie := &http.Cookie{
+			Name:     name,
+			Value:    value,
+			Domain:   strings.TrimPrefix(domain, "."),
+			Path:     path,
+			Expires:  expires,
+			Secure:   secure,
+			HttpOnly: strings.HasPrefix(domain, "#HttpOnly_"),
+		}
+
+		cookies = append(cookies, cookie)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading cookie file: %w", err)
+	}
+
+	// Set cookies in jar
+	if len(cookies) > 0 {
+		jar.SetCookies(targetURL, cookies)
+	}
+
+	return jar, nil
 }
 
 // APIError represents an error response from the n8n API
@@ -141,6 +221,16 @@ func NewClient(config *Config) (*Client, error) {
 	httpClient := &http.Client{
 		Timeout:   timeout,
 		Transport: transport,
+	}
+
+	// If using session authentication, set up cookie jar
+	if sessionAuth, ok := config.Auth.(*SessionAuth); ok && sessionAuth.CookieFile != "" {
+		cookieJar, err := LoadCookiesFromFile(sessionAuth.CookieFile, baseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cookies from file: %w", err)
+		}
+		httpClient.Jar = cookieJar
+		sessionAuth.CookieJar = cookieJar
 	}
 
 	logger := config.Logger

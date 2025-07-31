@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"net/http/cookiejar"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -129,15 +128,9 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 	if useSessionAuth && cookieFile != "" {
 		// Use session-based authentication for CI environments
-		jar, err := cookiejar.New(nil)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to Create Cookie Jar",
-				"Failed to create cookie jar for session authentication: "+err.Error(),
-			)
-			return
+		authMethod = &client.SessionAuth{
+			CookieFile: cookieFile,
 		}
-		authMethod = &client.SessionAuth{CookieJar: jar}
 	} else if apiKey != "" {
 		authMethod = &client.APIKeyAuth{APIKey: apiKey}
 	} else if email != "" && password != "" {

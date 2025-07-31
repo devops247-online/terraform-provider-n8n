@@ -34,11 +34,22 @@ test:
 	$(GOTEST) -v ./...
 
 testacc:
+	@echo "Note: Acceptance tests require a running n8n instance with proper authentication."
+	@echo "Set N8N_BASE_URL and N8N_API_KEY (or N8N_EMAIL/N8N_PASSWORD) environment variables."
+	@echo "Set TF_ACC_SKIP=1 to skip acceptance tests."
 	TF_ACC=1 $(GOTEST) -v ./... -timeout 120m
 
 # Run acceptance tests with Docker n8n instance
 testacc-docker:
 	./scripts/test-acceptance.sh
+
+# Run only unit tests (no acceptance tests)
+test-unit:
+	$(GOTEST) -v ./... -timeout 30m
+
+# Run tests with acceptance tests skipped
+test-skip-acc:
+	TF_ACC=1 TF_ACC_SKIP=1 $(GOTEST) -v ./... -timeout 30m
 
 install: build
 	mkdir -p $(TERRAFORM_PLUGINS_DIR)/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)
@@ -102,7 +113,10 @@ help:
 	@echo "  build        - Build the provider binary"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  test         - Run unit tests"
-	@echo "  testacc      - Run acceptance tests"
+	@echo "  test-unit    - Run only unit tests (no acceptance tests)"
+	@echo "  test-skip-acc- Run tests with acceptance tests skipped"
+	@echo "  testacc      - Run acceptance tests (requires n8n setup)"
+	@echo "  testacc-docker- Run acceptance tests with Docker n8n"
 	@echo "  install      - Install provider locally for testing"
 	@echo "  uninstall    - Remove locally installed provider"
 	@echo "  fmt          - Format Go code"
