@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -69,41 +70,26 @@ func TestClient_GetUsers(t *testing.T) {
 }
 
 func TestClient_GetUsersWithOptions(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
+	expectedQuery := url.Values{
+		"role":  []string{"admin"},
+		"limit": []string{"5"},
+	}
 
-		if query.Get("role") != "admin" {
-			t.Errorf("Expected role=admin, got %s", query.Get("role"))
-		}
+	response := UserListResponse{
+		Data: []User{},
+	}
 
-		if query.Get("limit") != "5" {
-			t.Errorf("Expected limit=5, got %s", query.Get("limit"))
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		response := UserListResponse{
-			Data: []User{},
-		}
-		_ = json.NewEncoder(w).Encode(response)
-	}))
+	server := TestServer(ListTestHandler(t, expectedQuery, response))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
-
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
+	client := CreateTestClient(t, server.URL)
 
 	options := &UserListOptions{
 		Role:  "admin",
 		Limit: 5,
 	}
 
-	_, err = client.GetUsers(options)
+	_, err := client.GetUsers(options)
 	if err != nil {
 		t.Errorf("GetUsers() error = %v", err)
 	}
@@ -312,30 +298,12 @@ func TestClient_UpdateUser(t *testing.T) {
 }
 
 func TestClient_DeleteUser(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE request, got %s", r.Method)
-		}
-
-		if r.URL.Path != "/api/v1/users/test-id" {
-			t.Errorf("Expected path /api/v1/users/test-id, got %s", r.URL.Path)
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-	}))
+	server := TestServer(DeleteTestHandler(t, "/api/v1/users/test-id"))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
+	client := CreateTestClient(t, server.URL)
 
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
-
-	err = client.DeleteUser("test-id")
+	err := client.DeleteUser("test-id")
 	if err != nil {
 		t.Errorf("DeleteUser() error = %v", err)
 	}

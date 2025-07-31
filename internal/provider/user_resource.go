@@ -50,7 +50,8 @@ func (r *UserResource) Metadata(ctx context.Context, req resource.MetadataReques
 
 func (r *UserResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages an n8n user. This resource allows you to create, read, update, and delete users in your n8n instance.",
+		MarkdownDescription: "Manages an n8n user. This resource allows you to create, read, update, " +
+			"and delete users in your n8n instance.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -73,9 +74,10 @@ func (r *UserResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				Optional:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "User role (e.g., 'admin', 'member', 'editor'). If not specified, defaults to the instance default role.",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "User role (e.g., 'admin', 'member', 'editor'). If not specified, " +
+					"defaults to the instance default role.",
+				Optional: true,
+				Computed: true,
 			},
 			"password": schema.StringAttribute{
 				MarkdownDescription: "User password. This is sensitive data and will not be stored in the state after creation.",
@@ -131,7 +133,8 @@ func (r *UserResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.",
+				req.ProviderData),
 		)
 
 		return
@@ -275,7 +278,8 @@ func (r *UserResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-func (r *UserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *UserResource) ImportState(ctx context.Context, req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 

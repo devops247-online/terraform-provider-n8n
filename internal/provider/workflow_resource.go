@@ -47,13 +47,15 @@ type WorkflowResourceModel struct {
 	UpdatedAt   types.String `tfsdk:"updated_at"`
 }
 
-func (r *WorkflowResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *WorkflowResource) Metadata(ctx context.Context, req resource.MetadataRequest,
+	resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_workflow"
 }
 
 func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages an n8n workflow. Workflows are the core automation units in n8n that define a series of nodes and their connections.",
+		MarkdownDescription: "Manages an n8n workflow. Workflows are the core automation units in " +
+			"n8n that define a series of nodes and their connections.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -121,7 +123,8 @@ func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaReques
 	}
 }
 
-func (r *WorkflowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *WorkflowResource) Configure(ctx context.Context, req resource.ConfigureRequest,
+	resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -132,7 +135,8 @@ func (r *WorkflowResource) Configure(ctx context.Context, req resource.Configure
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.",
+				req.ProviderData),
 		)
 
 		return
@@ -445,7 +449,8 @@ func (r *WorkflowResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 }
 
-func (r *WorkflowResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *WorkflowResource) ImportState(ctx context.Context, req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 

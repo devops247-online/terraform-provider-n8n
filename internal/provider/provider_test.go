@@ -12,7 +12,7 @@ import (
 // CLI command executed to create a provider server to which the CLI can
 // reattach.
 //
-//nolint:unused // This variable is used by acceptance tests when TF_ACC=1
+// nolint:unused // This variable is used by acceptance tests when TF_ACC=1
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"n8n": providerserver.NewProtocol6WithError(New("test")()),
 }

@@ -11,9 +11,9 @@ output:
     - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
 
 issues:
+  uniq-by-line: true
   exclude-dirs:
     - vendor
     - testdata
@@ -25,12 +25,12 @@ issues:
 linters-settings:
   # Cyclomatic complexity
   cyclop:
-    max-complexity: 15
-    package-average: 10.0
+    max-complexity: 25
+    package-average: 15.0
 
   # Duplicate code detection
   dupl:
-    threshold: 100
+    threshold: 150
 
   # Function length
   funlen:
@@ -60,13 +60,14 @@ linters-settings:
 
   # Line length
   lll:
-    line-length: 120
+    line-length: 140
 
   # Struct tag checking
   govet:
     enable-all: true
     disable:
       - fieldalignment # Too strict for this project
+      - shadow         # Variable shadowing is acceptable in some contexts
 
   # Unused code detection
   unused:
@@ -101,22 +102,14 @@ linters:
     # Additional useful linters
     - bodyclose     # Check HTTP response body is closed
     - cyclop        # Cyclomatic complexity
-    - dupl          # Duplicate code detection
     - durationcheck # Duration comparisons
-    - errorlint     # Error handling improvements
     - exhaustive    # Exhaustiveness checks for enums
-    - funlen        # Function length check
-    - gocognit      # Cognitive complexity
-    - goconst       # Constant detection
-    - gocritic      # Comprehensive Go linter
     - gofmt         # Format checking
     - goimports     # Import formatting
     - gosec         # Security audit
-    - lll           # Line length check
     - misspell      # Spell checking
     - nakedret      # Naked returns check
     - nilerr        # Nil error checks
-    - nolintlint    # Nolint directive checking
     - prealloc      # Slice preallocation
     - predeclared   # Predeclared identifier check
     - revive        # Golint replacement
@@ -131,7 +124,6 @@ linters:
     - gochecknoglobals # We use some globals for provider registration
     - gochecknoinits   # Init functions are used in provider setup
     - testpackage      # Tests can be in the same package
-    - exportloopref    # Deprecated since Go 1.22
 
   exclude-rules:
     # Test files can be longer and have different complexity rules

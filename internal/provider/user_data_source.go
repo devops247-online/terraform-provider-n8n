@@ -38,7 +38,8 @@ type UserDataSourceModel struct {
 	UpdatedAt types.String `tfsdk:"updated_at"`
 }
 
-func (d *UserDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *UserDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest,
+	resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_user"
 }
 
@@ -103,7 +104,8 @@ func (d *UserDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 	}
 }
 
-func (d *UserDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *UserDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest,
+	resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -114,7 +116,8 @@ func (d *UserDataSource) Configure(ctx context.Context, req datasource.Configure
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.",
+				req.ProviderData),
 		)
 
 		return

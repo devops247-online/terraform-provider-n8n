@@ -43,30 +43,37 @@ func (p *N8nProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *N8nProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The n8n provider allows you to manage n8n workflows, credentials, and other resources using Infrastructure as Code.\n\n" +
-			"n8n is a free and source-available workflow automation tool that lets you connect anything to everything via its open, fair-code model.",
+		MarkdownDescription: "The n8n provider allows you to manage n8n workflows, credentials, and other resources " +
+			"using Infrastructure as Code.\n\n" +
+			"n8n is a free and source-available workflow automation tool that lets you connect anything to " +
+			"everything via its open, fair-code model.",
 		Attributes: map[string]schema.Attribute{
 			"base_url": schema.StringAttribute{
-				MarkdownDescription: "The base URL of your n8n instance. Can be set via the `N8N_BASE_URL` environment variable.",
-				Optional:            true,
+				MarkdownDescription: "The base URL of your n8n instance. Can be set via the " +
+					"`N8N_BASE_URL` environment variable.",
+				Optional: true,
 			},
 			"api_key": schema.StringAttribute{
-				MarkdownDescription: "API key for authentication with n8n. Can be set via the `N8N_API_KEY` environment variable.",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: "API key for authentication with n8n. Can be set via the " +
+					"`N8N_API_KEY` environment variable.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"email": schema.StringAttribute{
-				MarkdownDescription: "Email for basic authentication with n8n. Can be set via the `N8N_EMAIL` environment variable. Alternative to api_key.",
-				Optional:            true,
+				MarkdownDescription: "Email for basic authentication with n8n. Can be set via the " +
+					"`N8N_EMAIL` environment variable. Alternative to api_key.",
+				Optional: true,
 			},
 			"password": schema.StringAttribute{
-				MarkdownDescription: "Password for basic authentication with n8n. Can be set via the `N8N_PASSWORD` environment variable. Alternative to api_key.",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: "Password for basic authentication with n8n. Can be set via the " +
+					"`N8N_PASSWORD` environment variable. Alternative to api_key.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"insecure_skip_verify": schema.BoolAttribute{
-				MarkdownDescription: "Skip TLS certificate verification. Can be set via the `N8N_INSECURE_SKIP_VERIFY` environment variable. Defaults to false.",
-				Optional:            true,
+				MarkdownDescription: "Skip TLS certificate verification. Can be set via the " +
+					"`N8N_INSECURE_SKIP_VERIFY` environment variable. Defaults to false.",
+				Optional: true,
 			},
 		},
 	}
