@@ -190,11 +190,15 @@ jobs:
           -e DB_POSTGRESDB_PASSWORD=n8n \
           -e N8N_API_KEY=test-api-key \
           -e N8N_METRICS=true \
+          -e N8N_LOG_LEVEL=debug \
+          -e N8N_USER_MANAGEMENT_DISABLED=false \
+          -e N8N_PUBLIC_API_DISABLED=false \
+          -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false \
           -e QUEUE_HEALTH_CHECK_ACTIVE=true \
           -e EXECUTIONS_DATA_SAVE_ON_SUCCESS=none \
           -e EXECUTIONS_DATA_SAVE_ON_ERROR=none \
           -e EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=false \
-          -e N8N_LOG_LEVEL=debug \
+          -e NODE_ENV=production \
           n8nio/n8n:${{ matrix.n8n-version }}
         
         echo "n8n container started, checking status..."
@@ -264,6 +268,109 @@ jobs:
           docker logs n8n
           exit 1
         '
+    
+    - name: Setup n8n initial owner
+      run: |
+        echo "Setting up n8n initial owner and API access..."
+        
+        # Function to setup n8n owner
+        setup_n8n_owner() {
+          local setup_payload='{
+            "email": "admin@example.com",
+            "firstName": "Admin",
+            "lastName": "User",
+            "password": "admin123",
+            "settings": {
+              "isOnboardingCallPromptDismissed": true,
+              "allowCreateDefaultUser": true
+            }
+          }'
+          
+          echo "Attempting n8n owner setup..."
+          
+          # Try setup API endpoint (works for most versions)
+          setup_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -X POST http://localhost:5678/rest/owner/setup \
+            -H "Content-Type: application/json" \
+            -d "$setup_payload" 2>/dev/null)
+          
+          setup_http_code=$(echo "$setup_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          setup_body=$(echo "$setup_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+          
+          echo "Setup API response code: $setup_http_code"
+          echo "Setup API response body: $setup_body"
+          
+          if [ "$setup_http_code" = "200" ] || [ "$setup_http_code" = "201" ]; then
+            echo "✅ n8n owner setup successful"
+            return 0
+          elif [ "$setup_http_code" = "400" ] && echo "$setup_body" | grep -q "owner.*already.*setup\|already.*initialized"; then
+            echo "ℹ️  n8n owner already exists, continuing..."
+            return 0
+          else
+            echo "⚠️  Setup API failed with code $setup_http_code, trying alternative methods..."
+            return 1
+          fi
+        }
+        
+        # Function to verify API access
+        verify_api_access() {
+          echo "Verifying API access with API key..."
+          
+          api_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -H "X-N8N-API-KEY: test-api-key" \
+            http://localhost:5678/api/v1/workflows 2>/dev/null)
+          
+          api_http_code=$(echo "$api_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+          api_body=$(echo "$api_response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
+          
+          echo "API verification response code: $api_http_code"
+          echo "API verification response: $api_body"
+          
+          if [ "$api_http_code" = "200" ]; then
+            echo "✅ API access verification successful"
+            return 0
+          else
+            echo "❌ API access verification failed"
+            return 1
+          fi
+        }
+        
+        # Main setup process with retries
+        max_setup_attempts=10
+        setup_attempt=0
+        
+        while [ $setup_attempt -lt $max_setup_attempts ]; do
+          setup_attempt=$((setup_attempt + 1))
+          echo "Setup attempt $setup_attempt/$max_setup_attempts..."
+          
+          if setup_n8n_owner; then
+            echo "Owner setup completed, waiting for services to stabilize..."
+            sleep 3
+            
+            # Verify API access works
+            if verify_api_access; then
+              echo "🎉 n8n setup and API verification completed successfully!"
+              exit 0
+            else
+              echo "⚠️  API verification failed, retrying setup..."
+            fi
+          else
+            echo "⚠️  Owner setup failed, retrying..."
+          fi
+          
+          # Show recent logs for debugging
+          if [ $((setup_attempt % 3)) -eq 0 ]; then
+            echo "🔍 Recent n8n logs for debugging:"
+            docker logs --tail 20 n8n
+          fi
+          
+          sleep 5
+        done
+        
+        echo "❌ Failed to complete n8n setup after $max_setup_attempts attempts"
+        echo "Final n8n logs:"
+        docker logs n8n
+        exit 1
     
     - name: Run acceptance tests
       env:
