@@ -37,13 +37,15 @@ type ProjectUserResourceModel struct {
 	AddedAt   types.String `tfsdk:"added_at"`
 }
 
-func (r *ProjectUserResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *ProjectUserResource) Metadata(ctx context.Context, req resource.MetadataRequest,
+	resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_project_user"
 }
 
 func (r *ProjectUserResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages user membership in an n8n project. This resource allows you to assign users to projects with specific roles.",
+		MarkdownDescription: "Manages user membership in an n8n project. This resource allows you to " +
+			"assign users to projects with specific roles.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -81,7 +83,8 @@ func (r *ProjectUserResource) Schema(ctx context.Context, req resource.SchemaReq
 	}
 }
 
-func (r *ProjectUserResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *ProjectUserResource) Configure(ctx context.Context, req resource.ConfigureRequest,
+	resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -92,7 +95,8 @@ func (r *ProjectUserResource) Configure(ctx context.Context, req resource.Config
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.",
+				req.ProviderData),
 		)
 
 		return
@@ -159,7 +163,8 @@ func (r *ProjectUserResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	if foundUser == nil {
-		resp.Diagnostics.AddError("Not Found", fmt.Sprintf("User %s not found in project %s", data.UserID.ValueString(), data.ProjectID.ValueString()))
+		resp.Diagnostics.AddError("Not Found",
+			fmt.Sprintf("User %s not found in project %s", data.UserID.ValueString(), data.ProjectID.ValueString()))
 		return
 	}
 
@@ -188,7 +193,8 @@ func (r *ProjectUserResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	// Update project user via API
-	updatedProjectUser, err := r.client.UpdateProjectUser(data.ProjectID.ValueString(), data.UserID.ValueString(), projectUser)
+	updatedProjectUser, err := r.client.UpdateProjectUser(data.ProjectID.ValueString(),
+		data.UserID.ValueString(), projectUser)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update project user, got error: %s", err))
 		return
@@ -219,14 +225,16 @@ func (r *ProjectUserResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-func (r *ProjectUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *ProjectUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse) {
 	// Import state should be in the format "project_id:user_id"
 	// We'll parse this in the ID field and then set the individual fields
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 // Helper function to update model from API response
-func (r *ProjectUserResource) updateModelFromProjectUser(model *ProjectUserResourceModel, projectUser *client.ProjectUser) {
+func (r *ProjectUserResource) updateModelFromProjectUser(model *ProjectUserResourceModel,
+	projectUser *client.ProjectUser) {
 	model.ID = types.StringValue(fmt.Sprintf("%s:%s", projectUser.ProjectID, projectUser.UserID))
 	model.ProjectID = types.StringValue(projectUser.ProjectID)
 	model.UserID = types.StringValue(projectUser.UserID)

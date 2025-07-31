@@ -19,7 +19,7 @@ NAMESPACE=devops247-online
 NAME=n8n
 OS_ARCH=linux_amd64
 
-.PHONY: all build clean test install uninstall fmt vet lint docs testacc
+.PHONY: all build clean test install uninstall fmt vet lint docs testacc pre-commit-install pre-commit-run
 
 all: build
 
@@ -34,11 +34,22 @@ test:
 	$(GOTEST) -v ./...
 
 testacc:
+	@echo "Note: Acceptance tests require a running n8n instance with proper authentication."
+	@echo "Set N8N_BASE_URL and N8N_API_KEY (or N8N_EMAIL/N8N_PASSWORD) environment variables."
+	@echo "Set TF_ACC_SKIP=1 to skip acceptance tests."
 	TF_ACC=1 $(GOTEST) -v ./... -timeout 120m
 
 # Run acceptance tests with Docker n8n instance
 testacc-docker:
 	./scripts/test-acceptance.sh
+
+# Run only unit tests (no acceptance tests)
+test-unit:
+	$(GOTEST) -v ./... -timeout 30m
+
+# Run tests with acceptance tests skipped
+test-skip-acc:
+	TF_ACC=1 TF_ACC_SKIP=1 $(GOTEST) -v ./... -timeout 30m
 
 install: build
 	mkdir -p $(TERRAFORM_PLUGINS_DIR)/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)
@@ -96,13 +107,23 @@ local-install: build
 	mkdir -p ~/.terraform.d/plugins/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)/
 	cp $(BINARY_NAME) ~/.terraform.d/plugins/$(HOSTNAME)/$(NAMESPACE)/$(NAME)/$(VERSION)/$(OS_ARCH)/$(BINARY_NAME)_v$(VERSION)
 
+# Pre-commit hooks
+pre-commit-install:
+	./scripts/install-pre-commit-hooks.sh
+
+pre-commit-run:
+	pre-commit run --all-files
+
 # Help
 help:
 	@echo "Available commands:"
 	@echo "  build        - Build the provider binary"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  test         - Run unit tests"
-	@echo "  testacc      - Run acceptance tests"
+	@echo "  test-unit    - Run only unit tests (no acceptance tests)"
+	@echo "  test-skip-acc- Run tests with acceptance tests skipped"
+	@echo "  testacc      - Run acceptance tests (requires n8n setup)"
+	@echo "  testacc-docker- Run acceptance tests with Docker n8n"
 	@echo "  install      - Install provider locally for testing"
 	@echo "  uninstall    - Remove locally installed provider"
 	@echo "  fmt          - Format Go code"
@@ -115,3 +136,5 @@ help:
 	@echo "  dev-setup    - Set up development environment"
 	@echo "  pre-release  - Run all checks before release"
 	@echo "  local-install- Install provider for local testing"
+	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  pre-commit-run - Run pre-commit on all files"

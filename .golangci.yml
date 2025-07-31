@@ -1,0 +1,175 @@
+# golangci-lint configuration for terraform-provider-n8n
+# See https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 10m
+  issues-exit-code: 1
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+issues:
+  uniq-by-line: true
+  exclude-dirs:
+    - vendor
+    - testdata
+    - examples
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*_generated\\.go$"
+
+linters-settings:
+  # Cyclomatic complexity
+  cyclop:
+    max-complexity: 25
+    package-average: 15.0
+
+  # Duplicate code detection
+  dupl:
+    threshold: 150
+
+  # Function length
+  funlen:
+    lines: 100
+    statements: 50
+
+  # Cognitive complexity
+  gocognit:
+    min-complexity: 15
+
+  # Constants detection
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  # Security audit
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G104 # Errors unhandled (we handle them explicitly)
+    exclude-generated: true
+
+  # Import formatting
+  goimports:
+    local-prefixes: github.com/devops247-online/terraform-provider-n8n
+
+  # Line length
+  lll:
+    line-length: 140
+
+  # Struct tag checking
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # Too strict for this project
+      - shadow         # Variable shadowing is acceptable in some contexts
+
+  # Unused code detection
+  unused:
+    check-exported: false
+
+  # Variable naming conventions
+  revive:
+    rules:
+      - name: exported
+        disabled: true # Terraform providers have specific naming conventions
+
+  # Error wrapping
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+
+linters:
+  enable:
+    # Default linters
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Suggest code simplifications
+    - govet         # Go vet
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Staticcheck
+    - typecheck     # Type checking
+    - unused        # Unused code detection
+
+    # Additional useful linters
+    - bodyclose     # Check HTTP response body is closed
+    - cyclop        # Cyclomatic complexity
+    - durationcheck # Duration comparisons
+    - exhaustive    # Exhaustiveness checks for enums
+    - gofmt         # Format checking
+    - goimports     # Import formatting
+    - gosec         # Security audit
+    - misspell      # Spell checking
+    - nakedret      # Naked returns check
+    - nilerr        # Nil error checks
+    - prealloc      # Slice preallocation
+    - predeclared   # Predeclared identifier check
+    - revive        # Golint replacement
+    - rowserrcheck  # SQL rows.Err() check
+    - sqlclosecheck # SQL close check
+    - unconvert     # Unnecessary conversions
+    - unparam       # Unused function parameters
+    - whitespace    # Whitespace issues
+    - wrapcheck     # Error wrapping
+
+  disable:
+    - gochecknoglobals # We use some globals for provider registration
+    - gochecknoinits   # Init functions are used in provider setup
+    - testpackage      # Tests can be in the same package
+
+  exclude-rules:
+    # Test files can be longer and have different complexity rules
+    - path: _test\.go
+      linters:
+        - funlen
+        - cyclop
+        - gocognit
+        - dupl
+
+    # Main.go typically has simple setup code
+    - path: main\.go
+      linters:
+        - funlen
+
+    # Generated or vendored code
+    - path: vendor/
+      linters:
+        - all
+    - path: testdata/
+      linters:
+        - all
+
+    # Terraform provider specific exclusions
+    - text: "exported (type|method|function) .* should have comment or be unexported"
+      linters:
+        - revive
+    - text: "package-comments"
+      linters:
+        - revive
+
+    # Allow higher complexity for security validation functions
+    - path: internal/client/client\.go
+      text: "cognitive complexity .* of func `validateCookieFilePath`"
+      linters:
+        - gocognit
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  # Custom exclusions
+  exclude:
+    # Allow TODO comments during development
+    - "Line contains TODO/FIXME/BUG"
+
+severity:
+  default-severity: error
+  case-sensitive: false

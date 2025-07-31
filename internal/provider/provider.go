@@ -43,30 +43,37 @@ func (p *N8nProvider) Metadata(ctx context.Context, req provider.MetadataRequest
 
 func (p *N8nProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "The n8n provider allows you to manage n8n workflows, credentials, and other resources using Infrastructure as Code.\n\n" +
-			"n8n is a free and source-available workflow automation tool that lets you connect anything to everything via its open, fair-code model.",
+		MarkdownDescription: "The n8n provider allows you to manage n8n workflows, credentials, and other resources " +
+			"using Infrastructure as Code.\n\n" +
+			"n8n is a free and source-available workflow automation tool that lets you connect anything to " +
+			"everything via its open, fair-code model.",
 		Attributes: map[string]schema.Attribute{
 			"base_url": schema.StringAttribute{
-				MarkdownDescription: "The base URL of your n8n instance. Can be set via the `N8N_BASE_URL` environment variable.",
-				Optional:            true,
+				MarkdownDescription: "The base URL of your n8n instance. Can be set via the " +
+					"`N8N_BASE_URL` environment variable.",
+				Optional: true,
 			},
 			"api_key": schema.StringAttribute{
-				MarkdownDescription: "API key for authentication with n8n. Can be set via the `N8N_API_KEY` environment variable.",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: "API key for authentication with n8n. Can be set via the " +
+					"`N8N_API_KEY` environment variable.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"email": schema.StringAttribute{
-				MarkdownDescription: "Email for basic authentication with n8n. Can be set via the `N8N_EMAIL` environment variable. Alternative to api_key.",
-				Optional:            true,
+				MarkdownDescription: "Email for basic authentication with n8n. Can be set via the " +
+					"`N8N_EMAIL` environment variable. Alternative to api_key.",
+				Optional: true,
 			},
 			"password": schema.StringAttribute{
-				MarkdownDescription: "Password for basic authentication with n8n. Can be set via the `N8N_PASSWORD` environment variable. Alternative to api_key.",
-				Optional:            true,
-				Sensitive:           true,
+				MarkdownDescription: "Password for basic authentication with n8n. Can be set via the " +
+					"`N8N_PASSWORD` environment variable. Alternative to api_key.",
+				Optional:  true,
+				Sensitive: true,
 			},
 			"insecure_skip_verify": schema.BoolAttribute{
-				MarkdownDescription: "Skip TLS certificate verification. Can be set via the `N8N_INSECURE_SKIP_VERIFY` environment variable. Defaults to false.",
-				Optional:            true,
+				MarkdownDescription: "Skip TLS certificate verification. Can be set via the " +
+					"`N8N_INSECURE_SKIP_VERIFY` environment variable. Defaults to false.",
+				Optional: true,
 			},
 		},
 	}
@@ -119,7 +126,23 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		)
 	}
 
-	if apiKey == "" && (email == "" || password == "") {
+	// Check for session-based authentication from CI environment
+	useSessionAuth := os.Getenv("N8N_USE_SESSION_AUTH") == "true"
+	cookieFile := os.Getenv("N8N_COOKIE_FILE")
+
+	// Create n8n client with appropriate authentication method
+	var authMethod client.AuthMethod
+
+	if useSessionAuth && cookieFile != "" {
+		// Use session-based authentication for CI environments
+		authMethod = &client.SessionAuth{
+			CookieFile: cookieFile,
+		}
+	} else if apiKey != "" {
+		authMethod = &client.APIKeyAuth{APIKey: apiKey}
+	} else if email != "" && password != "" {
+		authMethod = &client.BasicAuth{Email: email, Password: password}
+	} else {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_key"),
 			"Missing n8n Authentication",
@@ -127,18 +150,7 @@ func (p *N8nProvider) Configure(ctx context.Context, req provider.ConfigureReque
 				"Either set the api_key attribute in the provider configuration or use the N8N_API_KEY environment variable, "+
 				"or provide both email and password for basic authentication via the N8N_EMAIL and N8N_PASSWORD environment variables.",
 		)
-	}
-
-	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Create n8n client
-	var authMethod client.AuthMethod
-	if apiKey != "" {
-		authMethod = &client.APIKeyAuth{APIKey: apiKey}
-	} else {
-		authMethod = &client.BasicAuth{Email: email, Password: password}
 	}
 
 	clientConfig := &client.Config{

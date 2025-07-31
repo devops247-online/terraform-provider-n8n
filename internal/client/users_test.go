@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -69,41 +70,26 @@ func TestClient_GetUsers(t *testing.T) {
 }
 
 func TestClient_GetUsersWithOptions(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
+	expectedQuery := url.Values{
+		"role":  []string{"admin"},
+		"limit": []string{"5"},
+	}
 
-		if query.Get("role") != "admin" {
-			t.Errorf("Expected role=admin, got %s", query.Get("role"))
-		}
+	response := UserListResponse{
+		Data: []User{},
+	}
 
-		if query.Get("limit") != "5" {
-			t.Errorf("Expected limit=5, got %s", query.Get("limit"))
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		response := UserListResponse{
-			Data: []User{},
-		}
-		_ = json.NewEncoder(w).Encode(response)
-	}))
+	server := TestServer(ListTestHandler(t, expectedQuery, response))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
-
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
+	client := CreateTestClient(t, server.URL)
 
 	options := &UserListOptions{
 		Role:  "admin",
 		Limit: 5,
 	}
 
-	_, err = client.GetUsers(options)
+	_, err := client.GetUsers(options)
 	if err != nil {
 		t.Errorf("GetUsers() error = %v", err)
 	}
@@ -182,12 +168,25 @@ func TestClient_CreateUser(t *testing.T) {
 		Password:  "password123",
 	}
 
-	expectedResult := &User{
+	expectedUser := User{
 		ID:        "new-id",
 		Email:     "newuser@example.com",
 		FirstName: "New",
 		LastName:  "User",
 		Role:      "member",
+	}
+
+	// n8n API returns array of {user: User, error: string} objects
+	type CreateUserResponse struct {
+		User  User   `json:"user"`
+		Error string `json:"error"`
+	}
+
+	expectedResult := []CreateUserResponse{
+		{
+			User:  expectedUser,
+			Error: "",
+		},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -199,11 +198,15 @@ func TestClient_CreateUser(t *testing.T) {
 			t.Errorf("Expected path /api/v1/users, got %s", r.URL.Path)
 		}
 
-		var receivedUserReq CreateUserRequest
-		_ = json.NewDecoder(r.Body).Decode(&receivedUserReq)
+		var receivedUserReqArray []*CreateUserRequest
+		_ = json.NewDecoder(r.Body).Decode(&receivedUserReqArray)
 
-		if receivedUserReq.Email != "newuser@example.com" {
-			t.Errorf("Expected user email 'newuser@example.com', got %s", receivedUserReq.Email)
+		if len(receivedUserReqArray) == 0 {
+			t.Errorf("Expected array of users, got empty array")
+		}
+
+		if len(receivedUserReqArray) > 0 && receivedUserReqArray[0].Email != "newuser@example.com" {
+			t.Errorf("Expected user email 'newuser@example.com', got %s", receivedUserReqArray[0].Email)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -295,30 +298,12 @@ func TestClient_UpdateUser(t *testing.T) {
 }
 
 func TestClient_DeleteUser(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE request, got %s", r.Method)
-		}
-
-		if r.URL.Path != "/api/v1/users/test-id" {
-			t.Errorf("Expected path /api/v1/users/test-id, got %s", r.URL.Path)
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-	}))
+	server := TestServer(DeleteTestHandler(t, "/api/v1/users/test-id"))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
+	client := CreateTestClient(t, server.URL)
 
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
-
-	err = client.DeleteUser("test-id")
+	err := client.DeleteUser("test-id")
 	if err != nil {
 		t.Errorf("DeleteUser() error = %v", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -65,41 +66,26 @@ func TestClient_GetCredentials(t *testing.T) {
 }
 
 func TestClient_GetCredentialsWithOptions(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
+	expectedQuery := url.Values{
+		"type":  []string{"oauth2Api"},
+		"limit": []string{"10"},
+	}
 
-		if query.Get("type") != "oauth2Api" {
-			t.Errorf("Expected type=oauth2Api, got %s", query.Get("type"))
-		}
+	response := CredentialListResponse{
+		Data: []Credential{},
+	}
 
-		if query.Get("limit") != "10" {
-			t.Errorf("Expected limit=10, got %s", query.Get("limit"))
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		response := CredentialListResponse{
-			Data: []Credential{},
-		}
-		_ = json.NewEncoder(w).Encode(response)
-	}))
+	server := TestServer(ListTestHandler(t, expectedQuery, response))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
-
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
+	client := CreateTestClient(t, server.URL)
 
 	options := &CredentialListOptions{
 		Type:  "oauth2Api",
 		Limit: 10,
 	}
 
-	_, err = client.GetCredentials(options)
+	_, err := client.GetCredentials(options)
 	if err != nil {
 		t.Errorf("GetCredentials() error = %v", err)
 	}
@@ -294,30 +280,12 @@ func TestClient_UpdateCredential(t *testing.T) {
 }
 
 func TestClient_DeleteCredential(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			t.Errorf("Expected DELETE request, got %s", r.Method)
-		}
-
-		if r.URL.Path != "/api/v1/credentials/test-id" {
-			t.Errorf("Expected path /api/v1/credentials/test-id, got %s", r.URL.Path)
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-	}))
+	server := TestServer(DeleteTestHandler(t, "/api/v1/credentials/test-id"))
 	defer server.Close()
 
-	config := &Config{
-		BaseURL: server.URL,
-		Auth:    &APIKeyAuth{APIKey: "test-key"},
-	}
+	client := CreateTestClient(t, server.URL)
 
-	client, err := NewClient(config)
-	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
-	}
-
-	err = client.DeleteCredential("test-id")
+	err := client.DeleteCredential("test-id")
 	if err != nil {
 		t.Errorf("DeleteCredential() error = %v", err)
 	}

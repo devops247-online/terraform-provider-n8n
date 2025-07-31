@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -9,7 +10,11 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -50,6 +55,7 @@ type Config struct {
 	Timeout            time.Duration
 	Logger             Logger
 	RetryConfig        RetryConfig
+	CookieFile         string // Path to cookie file for session authentication
 }
 
 // AuthMethod interface for different authentication methods
@@ -76,6 +82,165 @@ type BasicAuth struct {
 func (a *BasicAuth) ApplyAuth(req *http.Request) error {
 	req.SetBasicAuth(a.Email, a.Password)
 	return nil
+}
+
+// SessionAuth implements session-based authentication using cookies
+type SessionAuth struct {
+	CookieJar  http.CookieJar
+	CookieFile string
+}
+
+func (a *SessionAuth) ApplyAuth(req *http.Request) error {
+	// Session authentication is handled via cookies in the HTTP client
+	// No additional headers needed as cookies are automatically sent
+	return nil
+}
+
+// validateCookieFilePath validates that the cookie file path is safe to open
+func validateCookieFilePath(cookieFile string) error {
+	if cookieFile == "" {
+		return fmt.Errorf("cookie file path cannot be empty")
+	}
+
+	// Clean the path to resolve any .. or . components
+	cleanPath := filepath.Clean(cookieFile)
+
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("cookie file path contains invalid path traversal: %s", cookieFile)
+	}
+
+	if err := validateAbsolutePath(cleanPath, cookieFile); err != nil {
+		return err
+	}
+
+	return validateFileExtension(cleanPath)
+}
+
+// validateAbsolutePath checks if absolute paths are in allowed directories
+func validateAbsolutePath(cleanPath, originalPath string) error {
+	if !filepath.IsAbs(cleanPath) {
+		return nil
+	}
+
+	allowedDirs := getAllowedDirectories()
+	for _, allowedDir := range allowedDirs {
+		if strings.HasPrefix(cleanPath, filepath.Clean(allowedDir)) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cookie file path outside allowed directories: %s", originalPath)
+}
+
+// getAllowedDirectories returns list of safe directories for cookie files
+func getAllowedDirectories() []string {
+	allowedDirs := []string{"/tmp", "/var/tmp", os.TempDir()}
+
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		allowedDirs = append(allowedDirs, homeDir)
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		allowedDirs = append(allowedDirs, cwd)
+	}
+
+	return allowedDirs
+}
+
+// validateFileExtension checks if the file extension is allowed
+func validateFileExtension(cleanPath string) error {
+	ext := filepath.Ext(cleanPath)
+	allowedExts := []string{".txt", ".cookies", ".cookie", ""}
+
+	for _, allowedExt := range allowedExts {
+		if ext == allowedExt {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cookie file has invalid extension: %s (allowed: .txt, .cookies, .cookie, or no extension)", ext)
+}
+
+// LoadCookiesFromFile loads cookies from a Netscape format cookie file
+func LoadCookiesFromFile(cookieFile string, targetURL *url.URL) (http.CookieJar, error) {
+	// Validate the cookie file path for security
+	if err := validateCookieFilePath(cookieFile); err != nil {
+		return nil, fmt.Errorf("invalid cookie file path: %w", err)
+	}
+
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
+	}
+
+	// Use the cleaned path
+	cleanPath := filepath.Clean(cookieFile)
+	file, err := os.Open(cleanPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open cookie file: %w", err)
+	}
+	defer file.Close()
+
+	var cookies []*http.Cookie
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip comments and empty lines
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse Netscape cookie format: domain \t flag \t path \t secure \t expiration \t name \t value
+		parts := strings.Split(line, "\t")
+		if len(parts) < 7 {
+			continue
+		}
+
+		domain := parts[0]
+		path := parts[2]
+		secure := parts[3] == "TRUE"
+		expiration := parts[4]
+		name := parts[5]
+		value := parts[6]
+
+		// Convert expiration timestamp
+		var expires time.Time
+		if expiration != "0" {
+			if timestamp, err := strconv.ParseInt(expiration, 10, 64); err == nil {
+				expires = time.Unix(timestamp, 0)
+			}
+		}
+
+		// Skip expired cookies
+		if !expires.IsZero() && expires.Before(time.Now()) {
+			continue
+		}
+
+		cookie := &http.Cookie{
+			Name:     name,
+			Value:    value,
+			Domain:   strings.TrimPrefix(domain, "."),
+			Path:     path,
+			Expires:  expires,
+			Secure:   secure,
+			HttpOnly: strings.HasPrefix(domain, "#HttpOnly_"),
+		}
+
+		cookies = append(cookies, cookie)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading cookie file: %w", err)
+	}
+
+	// Set cookies in jar
+	if len(cookies) > 0 {
+		jar.SetCookies(targetURL, cookies)
+	}
+
+	return jar, nil
 }
 
 // APIError represents an error response from the n8n API
@@ -129,6 +294,16 @@ func NewClient(config *Config) (*Client, error) {
 	httpClient := &http.Client{
 		Timeout:   timeout,
 		Transport: transport,
+	}
+
+	// If using session authentication, set up cookie jar
+	if sessionAuth, ok := config.Auth.(*SessionAuth); ok && sessionAuth.CookieFile != "" {
+		cookieJar, err := LoadCookiesFromFile(sessionAuth.CookieFile, baseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cookies from file: %w", err)
+		}
+		httpClient.Jar = cookieJar
+		sessionAuth.CookieJar = cookieJar
 	}
 
 	logger := config.Logger
