@@ -1,8 +1,49 @@
 # Terraform Provider for n8n
 
-A Terraform provider for managing [n8n](https://n8n.io/) workflow automation resources.
+<div align="center">
 
-## Features
+[![Build Status](https://github.com/devops247-online/terraform-provider-n8n/actions/workflows/test.yml/badge.svg)](https://github.com/devops247-online/terraform-provider-n8n/actions/workflows/test.yml)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/devops247-online/terraform-provider-n8n)](https://golang.org/dl/)
+[![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.0-blueviolet)](https://www.terraform.io/)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+[![Latest Release](https://img.shields.io/github/release/devops247-online/terraform-provider-n8n.svg)](https://github.com/devops247-online/terraform-provider-n8n/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/devops247-online/terraform-provider-n8n)](https://goreportcard.com/report/github.com/devops247-online/terraform-provider-n8n)
+[![Registry](https://img.shields.io/badge/registry-terraform-purple)](https://registry.terraform.io/providers/devops247-online/n8n/latest)
+[![Documentation](https://img.shields.io/badge/docs-terraform--provider--n8n-blue)](https://registry.terraform.io/providers/devops247-online/n8n/latest/docs)
+[![GitHub Issues](https://img.shields.io/github/issues/devops247-online/terraform-provider-n8n)](https://github.com/devops247-online/terraform-provider-n8n/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/devops247-online/terraform-provider-n8n)](https://github.com/devops247-online/terraform-provider-n8n/stargazers)
+
+</div>
+
+**The official Terraform provider for [n8n](https://n8n.io/) workflow automation platform**
+
+Manage your n8n workflows, credentials, users, and automation infrastructure as code with Terraform. This provider enables Infrastructure as Code (IaC) best practices for n8n deployments, allowing you to version control, automate, and scale your workflow automation setup.
+
+## 🚀 Why Use This Provider?
+
+- **Infrastructure as Code**: Manage n8n resources with the same rigor as your infrastructure
+- **Version Control**: Track changes to workflows and credentials in Git
+- **Automation**: Deploy and manage n8n resources through CI/CD pipelines
+- **Consistency**: Ensure consistent n8n setups across environments
+- **Scale**: Manage large numbers of workflows and credentials efficiently
+- **Integration**: Seamlessly integrate with existing Terraform infrastructure
+
+## 📋 Table of Contents
+
+- [Why Use This Provider?](#-why-use-this-provider)
+- [Features](#-features)
+- [Quick Start](#-quick-start)  
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Authentication](#-authentication)
+- [Examples](#-examples)
+- [Development](#️-development)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [Support](#-support)
+- [License](#license)
+
+## ✨ Features
 
 - **Workflows**: Create, manage, and organize n8n workflows
 - **Credentials**: Securely manage authentication credentials for external services
@@ -11,7 +52,44 @@ A Terraform provider for managing [n8n](https://n8n.io/) workflow automation res
 - **Tags**: Categorize and organize workflows with tags
 - **Folders**: Hierarchical organization of workflows
 
-## Installation
+## 🚀 Quick Start
+
+Get started with the n8n Terraform provider in 3 simple steps:
+
+```hcl
+# 1. Configure the provider
+terraform {
+  required_providers {
+    n8n = {
+      source  = "devops247-online/n8n"
+      version = "~> 1.0"
+    }
+  }
+}
+
+# 2. Set up authentication
+provider "n8n" {
+  base_url = "https://your-n8n-instance.com"
+  api_key  = var.n8n_api_key
+}
+
+# 3. Create your first workflow
+resource "n8n_workflow" "hello_world" {
+  name   = "Hello World Workflow"
+  active = true
+  
+  nodes = jsonencode({
+    "Start": {
+      "parameters": {},
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    }
+  })
+}
+```
+
+## 📦 Installation
 
 ### Terraform Registry (Recommended)
 
@@ -35,7 +113,7 @@ terraform {
    cp terraform-provider-n8n ~/.terraform.d/plugins/registry.terraform.io/devops247-online/n8n/1.0.0/linux_amd64/
    ```
 
-## Usage
+## 🔧 Usage
 
 ### Provider Configuration
 
@@ -46,7 +124,7 @@ provider "n8n" {
 }
 ```
 
-### Authentication Methods
+## 🔐 Authentication
 
 #### API Key Authentication (Recommended)
 ```hcl
@@ -75,7 +153,7 @@ You can configure the provider using environment variables:
 - `N8N_PASSWORD` - Password for basic authentication
 - `N8N_INSECURE_SKIP_VERIFY` - Skip TLS certificate verification (default: false)
 
-### Example Usage
+## 📝 Examples
 
 #### Basic Workflow Management
 
@@ -161,7 +239,7 @@ resource "n8n_workflow" "api_workflow" {
 }
 ```
 
-## Development
+## 🛠️ Development
 
 ### Prerequisites
 
@@ -214,14 +292,14 @@ make lint
 make docs
 ```
 
-## Documentation
+## 📚 Documentation
 
 - [Provider Documentation](./docs/index.md)
 - [Resource Reference](./docs/resources/)
 - [Data Source Reference](./docs/data-sources/)
 - [Examples](./examples/)
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
@@ -229,18 +307,32 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 
 Please use the [GitHub issue tracker](https://github.com/devops247-online/terraform-provider-n8n/issues) to report bugs or request features.
 
-## License
+## 📄 License
 
-This project is licensed under the Mozilla Public License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Mozilla Public License 2.0** - see the [LICENSE](LICENSE) file for details.
 
-## Support
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](LICENSE)
+
+## 💬 Support
 
 - [Documentation](https://registry.terraform.io/providers/devops247-online/n8n/latest/docs)
 - [GitHub Issues](https://github.com/devops247-online/terraform-provider-n8n/issues)
 - [n8n Community](https://community.n8n.io/)
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - [n8n](https://n8n.io/) team for creating an amazing workflow automation tool
-- [HashiCorp](https://www.hashicorp.com/) for Terraform and the Plugin Framework
+- [HashiCorp](https://www.hashicorp.com/) for Terraform and the Plugin Framework  
 - The open-source community for inspiration and contributions
+
+---
+
+<div align="center">
+
+**⭐ Star this repository if it helped you! ⭐**
+
+[Report Bug](https://github.com/devops247-online/terraform-provider-n8n/issues) • [Request Feature](https://github.com/devops247-online/terraform-provider-n8n/issues) • [Contribute](CONTRIBUTING.md)
+
+Made with ❤️ by [DevOps247](https://github.com/devops247-online) | Powered by [n8n](https://n8n.io/) & [Terraform](https://terraform.io/)
+
+</div>
