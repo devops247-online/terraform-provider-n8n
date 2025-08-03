@@ -55,25 +55,23 @@ release:
   prerelease: auto
   mode: replace
   header: |
-    ## What's Changed
-    
-    {{ range .CommitGroups -}}
-    ### {{ .Title }}
-    {{ range .Commits -}}
-    - {{ .Message }} ({{ .ShortHash }})
-    {{ end }}
-    {{ end -}}
-    
-    ## Docker Images
-    
-    Docker images are available at:
-    - `ghcr.io/devops247-online/terraform-provider-n8n:{{ .Tag }}`
-    - `ghcr.io/devops247-online/terraform-provider-n8n:latest`
-    
+    ## 🎉 Initial Release
+
+    This is the first release of the Terraform Provider for n8n workflow automation platform.
+
+    ### ✨ Features
+    - **Workflow Management**: Create, update, and manage n8n workflows
+    - **Credential Management**: Securely manage authentication credentials
+    - **User Management**: Manage n8n users and permissions
+    - **Project Management**: Organize workflows with projects
+    - **LDAP Configuration**: Configure LDAP authentication
+    - **Multi-Authentication**: Support for API key and basic authentication
+    - **Security**: GPG-signed releases with comprehensive security checks
+
     ## Installation
-    
+
     ### Terraform Registry
-    
+
     ```hcl
     terraform {
       required_providers {
@@ -83,22 +81,28 @@ release:
         }
       }
     }
+
+    provider "n8n" {
+      base_url = "https://your-n8n-instance.com"
+      api_key  = var.n8n_api_key
+    }
     ```
-    
+
     ### Manual Installation
-    
+
     Download the appropriate binary for your platform from the attachments below and place it in your Terraform plugins directory.
   footer: |
-    ## Full Changelog
-    
-    **Full Changelog**: https://github.com/devops247-online/terraform-provider-n8n/compare/{{ .PreviousTag }}...{{ .Tag }}
-    
-    ## Support
-    
+    ## 📚 Documentation
+
+    - [Provider Documentation](https://registry.terraform.io/providers/devops247-online/n8n/latest/docs)
+    - [Usage Examples](https://github.com/devops247-online/terraform-provider-n8n/tree/main/examples)
+
+    ## 🐛 Support
+
     If you encounter any issues, please report them at: https://github.com/devops247-online/terraform-provider-n8n/issues
 
 changelog:
-  use: github
+  use: git
   sort: asc
   abbrev: 0
   groups:
