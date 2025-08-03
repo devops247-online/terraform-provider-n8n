@@ -285,9 +285,13 @@ func NewClient(config *Config) (*Client, error) {
 		timeout = 30 * time.Second
 	}
 
+	// Configure TLS settings
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: config.InsecureSkipVerify,
+			// InsecureSkipVerify should only be used for development/testing environments
+			// with self-signed certificates. In production, proper certificate validation
+			// should be used to prevent man-in-the-middle attacks.
+			InsecureSkipVerify: config.InsecureSkipVerify, // #nosec G402 - Configurable for development environments
 		},
 	}
 
@@ -394,8 +398,14 @@ func (c *Client) doRequest(method, path string, body any, result any) error {
 			return fmt.Errorf("request failed: %w", err)
 		}
 
+		// Ensure response body is properly closed
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				c.logger.Logf("Warning: failed to close response body: %v", closeErr)
+			}
+		}()
+
 		respBody, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
 		if err != nil {
 			return fmt.Errorf("failed to read response body: %w", err)
 		}
