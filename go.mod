@@ -1,8 +1,6 @@
 module github.com/devops247-online/terraform-provider-n8n
 
-go 1.23.7
-
-toolchain go1.23.11
+go 1.23.10
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.22.0
