@@ -7,6 +7,12 @@ on:
 
 permissions:
   contents: write
+  actions: read
+  checks: read
+  pull-requests: read
+  repository-projects: read
+  issues: write
+  statuses: read
 
 env:
   GO_VERSION: '1.23.4'
