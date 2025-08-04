@@ -1,0 +1,133 @@
+version: 2
+updates:
+  # Go module dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    reviewers:
+      - "devops247-online"
+    assignees:
+      - "devops247-online"
+    groups:
+      # Group HashiCorp Terraform-related dependencies together
+      terraform-dependencies:
+        patterns:
+          - "github.com/hashicorp/terraform-*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group security-related dependencies
+      security-dependencies:
+        patterns:
+          - "golang.org/x/crypto"
+          - "golang.org/x/net"
+          - "github.com/ProtonMail/go-crypto"
+          - "github.com/cloudflare/circl"
+        update-types:
+          - "patch"
+      # Group Google/gRPC dependencies
+      google-dependencies:
+        patterns:
+          - "google.golang.org/*"
+          - "github.com/golang/protobuf"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates for critical dependencies
+      # These should be updated manually after thorough testing
+      - dependency-name: "github.com/hashicorp/terraform-plugin-framework"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github.com/hashicorp/terraform-plugin-go"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github.com/hashicorp/terraform-plugin-testing"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    reviewers:
+      - "devops247-online"
+    assignees:
+      - "devops247-online"
+    groups:
+      # Group core GitHub Actions together
+      core-actions:
+        patterns:
+          - "actions/checkout"
+          - "actions/setup-go"
+          - "actions/cache"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group HashiCorp actions
+      hashicorp-actions:
+        patterns:
+          - "hashicorp/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group security/analysis actions
+      security-actions:
+        patterns:
+          - "github/codeql-action/*"
+          - "securego/gosec"
+          - "golangci/golangci-lint-action"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group release/deployment actions
+      release-actions:
+        patterns:
+          - "goreleaser/goreleaser-action"
+          - "softprops/action-gh-release"
+          - "crazy-max/ghaction-import-gpg"
+          - "codecov/codecov-action"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker dependencies (if any Dockerfiles exist)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+    reviewers:
+      - "devops247-online"
+    assignees:
+      - "devops247-online"
