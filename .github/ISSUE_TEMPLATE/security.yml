@@ -1,0 +1,208 @@
+name: 🔒 Security Vulnerability Report
+description: Report a security vulnerability (use private reporting when possible)
+title: "[SECURITY] "
+labels: ["security", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Important Security Notice
+
+        **For sensitive security vulnerabilities, please use GitHub's private vulnerability reporting feature instead of this public template.**
+
+        Go to the [Security tab](https://github.com/devops247-online/terraform-provider-n8n/security) → "Report a vulnerability" to create a private security advisory.
+
+        **Only use this public template for:**
+        - Non-sensitive security improvements
+        - Questions about security best practices
+        - Security-related feature requests
+        - General security discussions
+
+  - type: dropdown
+    id: vulnerability-type
+    attributes:
+      label: Vulnerability Type
+      description: What type of security issue is this?
+      options:
+        - Authentication bypass
+        - Credential exposure
+        - Injection vulnerability
+        - Privilege escalation
+        - Information disclosure
+        - Insecure defaults
+        - Dependency vulnerability
+        - Security best practice
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity-assessment
+    attributes:
+      label: Severity Assessment
+      description: How would you rate the severity of this issue?
+      options:
+        - "Critical - Immediate action required"
+        - "High - Significant security risk"
+        - "Medium - Moderate security risk"
+        - "Low - Minor security concern"
+        - "Info - Security improvement or question"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-component
+    attributes:
+      label: Affected Component
+      description: Which part of the provider is affected?
+      multiple: true
+      options:
+        - Provider authentication
+        - API client
+        - Resource implementations
+        - Credential handling
+        - Configuration management
+        - Dependencies
+        - Documentation
+        - Examples
+    validations:
+      required: true
+
+  - type: input
+    id: affected-versions
+    attributes:
+      label: Affected Versions
+      description: Which versions of the provider are affected?
+      placeholder: "v1.0.0 - v1.2.0 or all versions"
+    validations:
+      required: true
+
+  - type: textarea
+    id: vulnerability-description
+    attributes:
+      label: Vulnerability Description
+      description: |
+        **For non-sensitive issues only:** Describe the security vulnerability or concern.
+
+        **Do not include sensitive details like:**
+        - Actual credentials or API keys
+        - Specific exploit code
+        - Details that could be used maliciously
+      placeholder: |
+        Provide a general description of the security issue.
+        For sensitive vulnerabilities, use private reporting instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact-assessment
+    attributes:
+      label: Impact Assessment
+      description: |
+        What is the potential impact of this vulnerability?
+        Who might be affected and how?
+      placeholder: |
+        Describe the potential impact, such as:
+        - Data exposure risk
+        - Unauthorized access possibilities
+        - System compromise potential
+        - Affected user types
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Reproduction Steps (if applicable)
+      description: |
+        **For non-sensitive issues only:** How can this vulnerability be reproduced?
+
+        **Do not include:**
+        - Actual exploit code
+        - Steps that could cause harm
+        - Real credentials or sensitive data
+      placeholder: |
+        General steps to identify or reproduce the issue.
+        Use placeholder data and avoid harmful examples.
+
+  - type: textarea
+    id: mitigation-suggestions
+    attributes:
+      label: Suggested Mitigation
+      description: |
+        Do you have suggestions for how to fix or mitigate this vulnerability?
+      placeholder: |
+        Suggestions might include:
+        - Code changes needed
+        - Configuration improvements
+        - Documentation updates
+        - User recommendations
+
+  - type: dropdown
+    id: disclosure-timeline
+    attributes:
+      label: Disclosure Timeline
+      description: What is your preferred disclosure timeline?
+      options:
+        - "Immediate - This is not sensitive"
+        - "Standard - 90 days coordinated disclosure"
+        - "Extended - Requires longer timeline"
+        - "Flexible - Whatever works best"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any additional context that would help address this security issue:
+        - Related vulnerabilities or research
+        - Links to security advisories
+        - Community discussions
+        - Compliance requirements
+
+  - type: checkboxes
+    id: responsible-disclosure
+    attributes:
+      label: Responsible Disclosure
+      description: Please confirm your commitment to responsible disclosure
+      options:
+        - label: I will not publicly disclose details until a fix is available
+          required: false
+        - label: I will work with maintainers to coordinate disclosure timing
+          required: false
+        - label: I understand that sensitive details should be reported privately
+          required: true
+
+  - type: checkboxes
+    id: verification
+    attributes:
+      label: Verification
+      description: Please confirm the following
+      options:
+        - label: I have verified this issue exists in the latest version
+          required: true
+        - label: I have searched for existing security reports of this issue
+          required: true
+        - label: I understand this report may be made public if not sensitive
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 📞 Contact Information
+
+        For urgent security matters or if you need to discuss this privately:
+        - Use GitHub's private vulnerability reporting feature
+        - Contact the maintainers through secure channels
+
+        Thank you for helping keep our project secure! 🙏
+
+  - type: checkboxes
+    id: code-of-conduct
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

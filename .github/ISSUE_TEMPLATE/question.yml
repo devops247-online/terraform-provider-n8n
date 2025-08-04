@@ -1,0 +1,172 @@
+name: ❓ General Question
+description: Ask a question about using the Terraform n8n provider
+title: "[QUESTION] "
+labels: ["question", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before You Ask
+
+        Please check these resources first - your question might already be answered:
+
+        - 📚 [Provider Documentation](https://registry.terraform.io/providers/devops247-online/n8n/latest/docs)
+        - 💬 [GitHub Discussions](https://github.com/devops247-online/terraform-provider-n8n/discussions)
+        - 🔍 [Existing Issues](https://github.com/devops247-online/terraform-provider-n8n/issues)
+        - 🛠️ [n8n Community Forum](https://community.n8n.io/)
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: Question Category
+      description: What category does your question fall into?
+      options:
+        - Getting started / Setup
+        - Configuration / Usage
+        - Best practices
+        - Troubleshooting
+        - Integration with n8n
+        - Terraform concepts
+        - Provider limitations
+        - Compatibility
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: |
+        What would you like to know? Please be as specific as possible.
+        The more context you provide, the better we can help you.
+      placeholder: |
+        Ask your question here. For example:
+        - "How do I configure the provider to work with n8n running on a custom port?"
+        - "What's the best way to manage workflow credentials in Terraform?"
+        - "Can I use this provider with n8n Cloud?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: experience-level
+    attributes:
+      label: Experience Level
+      description: How familiar are you with these technologies?
+      options:
+        - "New to both Terraform and n8n"
+        - "Familiar with Terraform, new to n8n"
+        - "Familiar with n8n, new to Terraform"
+        - "Experienced with both"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: What Have You Tried?
+      description: |
+        What have you already attempted? What documentation have you read?
+        This helps us avoid suggesting things you've already tried.
+      placeholder: |
+        For example:
+        - "I read the provider documentation but couldn't find..."
+        - "I tried this configuration but got..."
+        - "I searched for similar issues and found..."
+
+  - type: textarea
+    id: current-configuration
+    attributes:
+      label: Current Configuration (if applicable)
+      description: |
+        If your question is about configuration, please share what you have so far.
+        **Remove any sensitive information like API keys or passwords.**
+      placeholder: |
+        terraform {
+          required_providers {
+            n8n = {
+              source = "devops247-online/n8n"
+              version = "~> 1.0"
+            }
+          }
+        }
+
+        provider "n8n" {
+          # your configuration
+        }
+      render: hcl
+
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: Environment Details (if relevant)
+      description: |
+        If your question is environment-specific, please provide details:
+      placeholder: |
+        - Terraform version:
+        - Provider version:
+        - n8n version:
+        - n8n deployment: (Docker, npm, cloud, etc.)
+        - Operating system:
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: What Are You Trying to Achieve?
+      description: |
+        What's your end goal? Understanding the bigger picture helps us provide better guidance.
+      placeholder: |
+        Describe what you're ultimately trying to accomplish, for example:
+        - "I want to automate the deployment of n8n workflows in my CI/CD pipeline"
+        - "I need to manage multiple n8n environments with different configurations"
+        - "I'm trying to integrate this provider with my existing Terraform modules"
+
+  - type: checkboxes
+    id: troubleshooting-checklist
+    attributes:
+      label: Pre-Flight Checklist
+      description: For configuration questions, please confirm you've checked these basics
+      options:
+        - label: My n8n instance is running and accessible
+          required: false
+        - label: I can access the n8n API directly (via curl or browser)
+          required: false
+        - label: My authentication credentials work with n8n
+          required: false
+        - label: I'm using compatible versions (check compatibility matrix in docs)
+          required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other information that might be helpful:
+        - Links to relevant documentation
+        - Screenshots (if applicable)
+        - Error messages you've encountered
+        - Community discussions you've found
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Getting Better Help
+
+        **For complex configuration questions or detailed troubleshooting:**
+        - Consider opening a [Discussion](https://github.com/devops247-online/terraform-provider-n8n/discussions) for better community interaction
+        - Include minimal reproducible examples when possible
+        - Check the [examples directory](https://github.com/devops247-online/terraform-provider-n8n/tree/main/examples) for reference configurations
+
+        **For urgent issues that block your work:**
+        - This might be a bug rather than a question - consider using the Bug Report template instead
+
+  - type: checkboxes
+    id: code-of-conduct
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

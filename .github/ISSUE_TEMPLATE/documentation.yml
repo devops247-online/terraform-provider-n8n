@@ -1,0 +1,175 @@
+name: 📚 Documentation Issue
+description: Report an issue with documentation or suggest improvements
+title: "[DOCS] "
+labels: ["documentation", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation! Please provide details about the documentation issue or improvement.
+
+  - type: dropdown
+    id: documentation-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation is affected?
+      options:
+        - Provider documentation (registry.terraform.io)
+        - README.md
+        - Resource/Data source documentation
+        - Example configurations
+        - Code comments
+        - API documentation
+        - Installation/Setup guides
+        - Troubleshooting guides
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: affected-page
+    attributes:
+      label: Affected Page/Section
+      description: Which specific page or section has the issue?
+      placeholder: "https://registry.terraform.io/providers/devops247-online/n8n/latest/docs/resources/workflow"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Incorrect information
+        - Missing information
+        - Unclear/confusing explanation
+        - Outdated information
+        - Typo/Grammar
+        - Broken link
+        - Missing example
+        - Improvement suggestion
+        - New documentation needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Current Content
+      description: |
+        What does the current documentation say?
+        Please quote the specific text that needs to be changed.
+      placeholder: Copy the current text that has issues
+
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: Issue Description
+      description: |
+        What is wrong with the current documentation?
+        How does it affect users trying to use the provider?
+      placeholder: |
+        Describe the issue, for example:
+        - "The example shows the wrong attribute name"
+        - "The description doesn't explain what happens when this field is omitted"
+        - "The workflow example doesn't work with the current n8n version"
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement
+      description: |
+        How should the documentation be improved?
+        What should the corrected content say?
+      placeholder: |
+        Provide your suggested improvement, for example:
+        - Corrected text
+        - Additional examples
+        - Clearer explanations
+        - Missing information that should be added
+
+  - type: textarea
+    id: example-configuration
+    attributes:
+      label: Working Example (if applicable)
+      description: |
+        If this is about configuration examples, please provide a working example
+        that demonstrates the correct usage.
+      placeholder: |
+        # Working Terraform configuration
+        resource "n8n_workflow" "example" {
+          # corrected example here
+        }
+      render: hcl
+
+  - type: dropdown
+    id: user-impact
+    attributes:
+      label: User Impact
+      description: How much does this documentation issue affect users?
+      options:
+        - "Low - Minor improvement"
+        - "Medium - Causes confusion but workarounds exist"
+        - "High - Blocks users from successful implementation"
+        - "Critical - Leads to configuration errors or failures"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: user-experience-level
+    attributes:
+      label: Target Audience
+      description: Which users are most affected by this documentation issue?
+      options:
+        - "Beginners - New to Terraform or n8n"
+        - "Intermediate - Familiar with Terraform or n8n"
+        - "Advanced - Experienced users"
+        - "All users"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any additional information that would help improve the documentation:
+        - Screenshots showing the issue
+        - Links to related discussions
+        - User feedback you've received
+        - Related documentation that works well
+
+  - type: checkboxes
+    id: research-done
+    attributes:
+      label: Research Checklist
+      description: Please confirm you have done the following
+      options:
+        - label: I have searched existing issues to make sure this hasn't been reported
+          required: true
+        - label: I have tested the current documentation/examples (if applicable)
+          required: false
+        - label: I have checked the latest version of the documentation
+          required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be interested in contributing to the documentation improvement?
+      options:
+        - label: I would be willing to submit a pull request to fix this documentation issue
+          required: false
+
+  - type: checkboxes
+    id: code-of-conduct
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

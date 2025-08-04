@@ -1,0 +1,198 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior with the Terraform n8n provider
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose and fix the issue.
+
+  - type: dropdown
+    id: affected-resource
+    attributes:
+      label: Affected Resource(s)
+      description: Which resource(s) are affected by this bug?
+      multiple: true
+      options:
+        - n8n_workflow
+        - n8n_credential
+        - n8n_user
+        - n8n_project
+        - n8n_project_user
+        - n8n_ldap_config
+        - data.n8n_user
+        - Provider configuration
+        - Other/Multiple
+    validations:
+      required: true
+
+  - type: input
+    id: terraform-version
+    attributes:
+      label: Terraform Version
+      description: Run `terraform version` to get this information
+      placeholder: "v1.6.0"
+    validations:
+      required: true
+
+  - type: input
+    id: provider-version
+    attributes:
+      label: Provider Version
+      description: Check your Terraform configuration or run `terraform providers`
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: n8n-version
+    attributes:
+      label: n8n Version
+      description: What version of n8n are you running?
+      placeholder: "1.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: n8n-deployment
+    attributes:
+      label: n8n Deployment Type
+      description: How is your n8n instance deployed?
+      options:
+        - Self-hosted (Docker)
+        - Self-hosted (npm)
+        - Self-hosted (Binary)
+        - n8n Cloud
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: authentication-method
+    attributes:
+      label: Authentication Method
+      description: Which authentication method are you using?
+      options:
+        - API Key
+        - Basic Authentication (email/password)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: What operating system are you running Terraform on?
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: What is happening that you didn't expect?
+      placeholder: Describe the current behavior in detail
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should be happening instead?
+      placeholder: Describe what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: terraform-configuration
+    attributes:
+      label: Terraform Configuration
+      description: Please provide the Terraform configuration that reproduces the issue
+      placeholder: |
+        terraform {
+          required_providers {
+            n8n = {
+              source  = "devops247-online/n8n"
+              version = "~> 1.0"
+            }
+          }
+        }
+
+        provider "n8n" {
+          base_url = "http://localhost:5678"
+          api_key  = "your-api-key"
+        }
+
+        resource "n8n_workflow" "example" {
+          # your configuration here
+        }
+      render: hcl
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: What are the exact steps to reproduce this behavior?
+      placeholder: |
+        1. Create a Terraform configuration with...
+        2. Run `terraform plan`
+        3. Run `terraform apply`
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: debug-output
+    attributes:
+      label: Debug Output
+      description: |
+        Please provide debug output by running Terraform with `TF_LOG=DEBUG terraform apply` or `TF_LOG=TRACE terraform apply`
+        **Important**: Remove any sensitive information like API keys, passwords, or personal data before sharing.
+      placeholder: Paste debug output here (remove sensitive information)
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context about the problem here, such as:
+        - Network configuration
+        - Firewall settings
+        - n8n instance configuration
+        - Any error messages from n8n logs
+        - Screenshots (if applicable)
+
+  - type: checkboxes
+    id: environment-check
+    attributes:
+      label: Environment Verification
+      description: Please confirm you have verified these common issues
+      options:
+        - label: I can successfully access the n8n API directly (e.g., via curl or browser)
+          required: false
+        - label: My n8n instance is running and accessible
+          required: false
+        - label: I have verified my authentication credentials work with n8n directly
+          required: false
+        - label: I have checked the n8n logs for any relevant error messages
+          required: false
+
+  - type: checkboxes
+    id: code-of-conduct
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

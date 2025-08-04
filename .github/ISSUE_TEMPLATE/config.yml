@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://registry.terraform.io/providers/devops247-online/n8n/latest/docs
+    about: Browse the provider documentation and examples
+  - name: 🤔 Discussion Forum
+    url: https://github.com/devops247-online/terraform-provider-n8n/discussions
+    about: Ask questions and discuss with the community
+  - name: 🛠️ n8n Community
+    url: https://community.n8n.io/
+    about: Get help with n8n-specific issues
+  - name: 📖 Terraform Documentation
+    url: https://developer.hashicorp.com/terraform/docs
+    about: Learn more about Terraform
