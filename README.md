@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/devops247-online/terraform-provider-n8n/actions/workflows/test.yml/badge.svg)](https://github.com/devops247-online/terraform-provider-n8n/actions/workflows/test.yml)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/devops247-online/terraform-provider-n8n)](https://golang.org/dl/)
 [![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.0-blueviolet)](https://www.terraform.io/)
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Latest Release](https://img.shields.io/github/release/devops247-online/terraform-provider-n8n.svg)](https://github.com/devops247-online/terraform-provider-n8n/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/devops247-online/terraform-provider-n8n)](https://goreportcard.com/report/github.com/devops247-online/terraform-provider-n8n)
 [![Registry](https://img.shields.io/badge/registry-terraform-purple)](https://registry.terraform.io/providers/devops247-online/n8n/latest)
@@ -309,9 +309,9 @@ Please use the [GitHub issue tracker](https://github.com/devops247-online/terraf
 
 ## 📄 License
 
-This project is licensed under the **Mozilla Public License 2.0** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 
 ## 💬 Support
 
