@@ -100,7 +100,7 @@ jobs:
 
     - name: Run GoReleaser (Primary Method)
       id: goreleaser
-      uses: goreleaser/goreleaser-action@v4
+      uses: goreleaser/goreleaser-action@v6
       continue-on-error: true
       with:
         distribution: goreleaser
