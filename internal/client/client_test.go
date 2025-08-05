@@ -182,6 +182,9 @@ func TestClient_ErrorHandling(t *testing.T) {
 }
 
 func TestClient_RetryLogic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping retry logic test in short mode")
+	}
 	attempts := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attempts++
@@ -226,6 +229,9 @@ func TestClient_RetryLogic(t *testing.T) {
 }
 
 func TestClient_RetryExhaustion(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping retry exhaustion test in short mode")
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
