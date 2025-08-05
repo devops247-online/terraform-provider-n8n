@@ -462,7 +462,8 @@ func isRetryableError(err error) bool {
 	// Network errors are generally retryable
 	return strings.Contains(err.Error(), "timeout") ||
 		strings.Contains(err.Error(), "connection refused") ||
-		strings.Contains(err.Error(), "connection reset")
+		strings.Contains(err.Error(), "connection reset") ||
+		strings.Contains(err.Error(), "network is unreachable")
 }
 
 // isRetryableHTTPStatus determines if an HTTP status code is retryable

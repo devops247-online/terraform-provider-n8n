@@ -435,8 +435,8 @@ func TestClient_ExponentialBackoff(t *testing.T) {
 		{2, 200 * time.Millisecond, 200 * time.Millisecond, false},
 		{3, 400 * time.Millisecond, 400 * time.Millisecond, false},
 		{4, 800 * time.Millisecond, 800 * time.Millisecond, false},
-		{5, 1600 * time.Millisecond, 2 * time.Second, true}, // Should hit max
-		{10, 2 * time.Second, 2 * time.Second, true},        // Should hit max
+		{5, 1600 * time.Millisecond, 1600 * time.Millisecond, false}, // Should not hit max yet
+		{10, 2 * time.Second, 2 * time.Second, true},                 // Should hit max
 	}
 
 	for _, tt := range tests {
